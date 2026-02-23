@@ -11,6 +11,15 @@ export function Login() {
   const { login, googleLogin } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  // Where to go after login
+  const redirectTo = searchParams.get('redirect') || localStorage.getItem('login_redirect') || '/';
+
+  // Persist redirect so Register page can use it too
+  useEffect(() => {
+    const r = searchParams.get('redirect');
+    if (r) localStorage.setItem('login_redirect', r);
+  }, [searchParams]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -34,7 +43,9 @@ export function Login() {
 
     googleLogin(code, redirectUri)
       .then(() => {
-        navigate('/', { replace: true });
+        const dest = localStorage.getItem('login_redirect') || '/';
+        localStorage.removeItem('login_redirect');
+        navigate(dest, { replace: true });
       })
       .catch((err) => {
         setError(err instanceof ApiError ? err.message : 'Google sign-in failed');
@@ -53,7 +64,8 @@ export function Login() {
     setLoading(true);
     try {
       await login(email, password);
-      navigate('/');
+      localStorage.removeItem('login_redirect');
+      navigate(redirectTo, { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Login failed');
     } finally {
@@ -62,6 +74,10 @@ export function Login() {
   }
 
   function handleGoogleLogin() {
+    // Save redirect URL before leaving for Google OAuth
+    if (redirectTo && redirectTo !== '/') {
+      localStorage.setItem('login_redirect', redirectTo);
+    }
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '1013267431983-nb49iiaav62n32jnb7186u0k5m5p1e5p.apps.googleusercontent.com';
     const redirectUri = window.location.origin + '/login';
     const scope = 'openid email profile';

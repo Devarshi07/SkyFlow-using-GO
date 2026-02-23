@@ -23,7 +23,9 @@ export function Register() {
     setLoading(true);
     try {
       await register(email, password);
-      navigate('/');
+      const dest = localStorage.getItem('login_redirect') || '/';
+      localStorage.removeItem('login_redirect');
+      navigate(dest, { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Registration failed');
     } finally {

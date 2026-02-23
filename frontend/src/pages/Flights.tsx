@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { gqlApi } from '../api/graphql';
-import { bookingsApi, profileApi, type Flight, type ConnectingFlight, type Airport, type City, ApiError } from '../api/client';
+import { bookingsApi, flightsApi, profileApi, type Flight, type ConnectingFlight, type Airport, type City, ApiError } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import './Flights.css';
 
@@ -78,6 +78,25 @@ export function Flights() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams.toString()]);
+
+  // Auto-open booking modal if returning from login with a `book` param
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    const bookFlightId = searchParams.get('book');
+    if (!bookFlightId) return;
+    const priceOverride = searchParams.get('price');
+
+    flightsApi.get(bookFlightId).then(f => {
+      setBookingFlight(f);
+      setBookingPriceOverride(priceOverride ? parseInt(priceOverride, 10) : null);
+      // Clean the book param from URL
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('book');
+      newParams.delete('price');
+      setSearchParams(newParams, { replace: true });
+    }).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoggedIn, searchParams.get('book')]);
 
   async function doSearch(o: string, d: string, dt: string) {
     setLoading(true);
@@ -205,7 +224,11 @@ export function Flights() {
                     airports={airports}
                     cities={cities}
                     onBook={() => {
-                      if (!isLoggedIn) { navigate('/login'); return; }
+                      if (!isLoggedIn) {
+                        const returnUrl = `/flights?origin=${origin}&destination=${dest}&date=${date}&book=${item.flight!.id}`;
+                        navigate(`/login?redirect=${encodeURIComponent(returnUrl)}`);
+                        return;
+                      }
                       setBookingFlight(item.flight!);
                       setBookingPriceOverride(null);
                     }}
@@ -217,7 +240,11 @@ export function Flights() {
                     airports={airports}
                     cities={cities}
                     onBook={() => {
-                      if (!isLoggedIn) { navigate('/login'); return; }
+                      if (!isLoggedIn) {
+                        const returnUrl = `/flights?origin=${origin}&destination=${dest}&date=${date}&book=${item.connecting!.leg1.id}&price=${item.connecting!.total_price}`;
+                        navigate(`/login?redirect=${encodeURIComponent(returnUrl)}`);
+                        return;
+                      }
                       setBookingFlight(item.connecting!.leg1);
                       setBookingPriceOverride(item.connecting!.total_price);
                     }}
