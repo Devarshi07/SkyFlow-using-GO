@@ -30,6 +30,7 @@ func (h *Handler) Routes(r chi.Router) {
 	r.Put("/{id}", h.Edit)
 	r.Post("/{id}/cancel", h.Cancel)
 	r.Post("/{id}/confirm-payment", h.ConfirmByBookingID)
+	r.Post("/{id}/confirm-edit", h.ConfirmEdit)
 }
 
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
@@ -120,7 +121,31 @@ func (h *Handler) Edit(w http.ResponseWriter, r *http.Request) {
 		response.WriteError(w, r, apperrors.BadRequest("invalid JSON"), h.log)
 		return
 	}
-	b, appErr := h.svc.EditBooking(r.Context(), userID, id, req)
+	res, appErr := h.svc.EditBooking(r.Context(), userID, id, req)
+	if appErr != nil {
+		response.WriteError(w, r, appErr.WithRequestID(middleware.GetRequestID(r.Context())), h.log)
+		return
+	}
+	response.WriteOK(w, r, res)
+}
+
+func (h *Handler) ConfirmEdit(w http.ResponseWriter, r *http.Request) {
+	userID := extractUserID(r)
+	if userID == "" {
+		response.WriteError(w, r, apperrors.Unauthorized(""), h.log)
+		return
+	}
+	id := chi.URLParam(r, "id")
+	var req struct {
+		PaymentIntentID string `json:"payment_intent_id"`
+		NewFlightID     string `json:"new_flight_id"`
+		NewSeats        int    `json:"new_seats"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		response.WriteError(w, r, apperrors.BadRequest("invalid JSON"), h.log)
+		return
+	}
+	b, appErr := h.svc.ConfirmEdit(r.Context(), userID, id, req.PaymentIntentID, req.NewFlightID, req.NewSeats)
 	if appErr != nil {
 		response.WriteError(w, r, appErr.WithRequestID(middleware.GetRequestID(r.Context())), h.log)
 		return

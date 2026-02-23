@@ -244,7 +244,7 @@ func (s *Service) CancelBooking(ctx context.Context, bookingID string) (*Booking
 	return b, nil
 }
 
-func (s *Service) EditBooking(ctx context.Context, userID, bookingID string, req EditBookingRequest) (*Booking, *apperrors.AppError) {
+func (s *Service) EditBooking(ctx context.Context, userID, bookingID string, req EditBookingRequest) (*EditBookingResponse, *apperrors.AppError) {
 	b, err := s.store.GetByID(ctx, bookingID)
 	if err != nil {
 		return nil, apperrors.NotFound("booking")
@@ -255,6 +255,8 @@ func (s *Service) EditBooking(ctx context.Context, userID, bookingID string, req
 	if b.Status == "cancelled" {
 		return nil, apperrors.BadRequest("cannot edit a cancelled booking")
 	}
+
+	oldAmount := b.Amount
 
 	// If flight is changing, handle seat swap
 	if req.FlightID != "" && req.FlightID != b.FlightID {
@@ -270,16 +272,50 @@ func (s *Service) EditBooking(ctx context.Context, userID, bookingID string, req
 			return nil, apperrors.BadRequest("not enough seats on the new flight")
 		}
 
-		// Restore seats on old flight
-		s.restoreSeats(ctx, b.FlightID, b.Seats)
+		newAmount := newFlight.Price * int64(seats)
+		amountDue := newAmount - oldAmount
 
-		// Reserve seats on new flight
+		// If the new flight costs more, require additional payment
+		if amountDue > 0 {
+			// Update passenger details on the booking (but don't change flight yet)
+			if req.PassengerName != "" {
+				b.PassengerName = req.PassengerName
+			}
+			if req.PassengerEmail != "" {
+				b.PassengerEmail = req.PassengerEmail
+			}
+			if req.PassengerPhone != "" {
+				b.PassengerPhone = req.PassengerPhone
+			}
+			_ = s.store.UpdateBooking(ctx, b)
+
+			// Create a payment intent for the difference
+			intentResp, payErr := s.paymentSvc.CreateIntent(payments.CreateIntentRequest{
+				Amount:   amountDue,
+				Currency: "usd",
+			})
+			if payErr != nil {
+				return nil, payErr
+			}
+
+			return &EditBookingResponse{
+				Booking:         b,
+				NeedsPayment:    true,
+				PaymentIntentID: intentResp.PaymentIntentID,
+				AmountDue:       amountDue,
+				OldAmount:       oldAmount,
+				NewAmount:       newAmount,
+			}, nil
+		}
+
+		// Same price or cheaper — just swap flights directly
+		s.restoreSeats(ctx, b.FlightID, b.Seats)
 		newAvail := newFlight.SeatsAvailable - seats
 		s.flightSvc.Update(ctx, req.FlightID, flights.UpdateFlightRequest{SeatsAvailable: &newAvail})
 
 		b.FlightID = req.FlightID
 		b.Seats = seats
-		b.Amount = newFlight.Price * int64(seats)
+		b.Amount = newAmount
 	} else if req.Seats > 0 && req.Seats != b.Seats {
 		// Just changing seat count on same flight
 		f, appErr := s.flightSvc.GetByID(ctx, b.FlightID)
@@ -290,10 +326,45 @@ func (s *Service) EditBooking(ctx context.Context, userID, bookingID string, req
 		if diff > 0 && f.SeatsAvailable < diff {
 			return nil, apperrors.BadRequest("not enough seats available")
 		}
+
+		newAmount := f.Price * int64(req.Seats)
+		amountDue := newAmount - oldAmount
+
+		// If more seats cost more, require payment
+		if amountDue > 0 {
+			if req.PassengerName != "" {
+				b.PassengerName = req.PassengerName
+			}
+			if req.PassengerEmail != "" {
+				b.PassengerEmail = req.PassengerEmail
+			}
+			if req.PassengerPhone != "" {
+				b.PassengerPhone = req.PassengerPhone
+			}
+			_ = s.store.UpdateBooking(ctx, b)
+
+			intentResp, payErr := s.paymentSvc.CreateIntent(payments.CreateIntentRequest{
+				Amount:   amountDue,
+				Currency: "usd",
+			})
+			if payErr != nil {
+				return nil, payErr
+			}
+
+			return &EditBookingResponse{
+				Booking:         b,
+				NeedsPayment:    true,
+				PaymentIntentID: intentResp.PaymentIntentID,
+				AmountDue:       amountDue,
+				OldAmount:       oldAmount,
+				NewAmount:       newAmount,
+			}, nil
+		}
+
 		newAvail := f.SeatsAvailable - diff
 		s.flightSvc.Update(ctx, b.FlightID, flights.UpdateFlightRequest{SeatsAvailable: &newAvail})
 		b.Seats = req.Seats
-		b.Amount = f.Price * int64(req.Seats)
+		b.Amount = newAmount
 	}
 
 	// Update passenger details
@@ -311,7 +382,111 @@ func (s *Service) EditBooking(ctx context.Context, userID, bookingID string, req
 		return nil, apperrors.Internal(err)
 	}
 
+	// Send updated booking email
+	s.publishUpdate(ctx, b)
+
+	return &EditBookingResponse{
+		Booking:      b,
+		NeedsPayment: false,
+	}, nil
+}
+
+// ConfirmEdit finalizes a booking edit after additional payment
+func (s *Service) ConfirmEdit(ctx context.Context, userID, bookingID string, paymentIntentID string, newFlightID string, newSeats int) (*Booking, *apperrors.AppError) {
+	b, err := s.store.GetByID(ctx, bookingID)
+	if err != nil {
+		return nil, apperrors.NotFound("booking")
+	}
+	if b.UserID != userID {
+		return nil, apperrors.Unauthorized("not your booking")
+	}
+
+	// Confirm the payment
+	if s.paymentSvc.IsLive() {
+		pd, payErr := s.paymentSvc.Get(paymentIntentID)
+		if payErr != nil {
+			return nil, payErr
+		}
+		if pd.Status != "succeeded" {
+			return nil, apperrors.BadRequest("payment not yet completed")
+		}
+	} else {
+		_, payErr := s.paymentSvc.Confirm(paymentIntentID)
+		if payErr != nil {
+			return nil, payErr
+		}
+	}
+
+	// Now apply the flight/seat change
+	seats := newSeats
+	if seats <= 0 {
+		seats = b.Seats
+	}
+
+	if newFlightID != "" && newFlightID != b.FlightID {
+		newFlight, appErr := s.flightSvc.GetByID(ctx, newFlightID)
+		if appErr != nil {
+			return nil, appErr
+		}
+		if newFlight.SeatsAvailable < seats {
+			return nil, apperrors.BadRequest("not enough seats on the new flight")
+		}
+
+		s.restoreSeats(ctx, b.FlightID, b.Seats)
+		newAvail := newFlight.SeatsAvailable - seats
+		s.flightSvc.Update(ctx, newFlightID, flights.UpdateFlightRequest{SeatsAvailable: &newAvail})
+
+		b.FlightID = newFlightID
+		b.Seats = seats
+		b.Amount = newFlight.Price * int64(seats)
+	} else if seats != b.Seats {
+		f, appErr := s.flightSvc.GetByID(ctx, b.FlightID)
+		if appErr != nil {
+			return nil, appErr
+		}
+		diff := seats - b.Seats
+		newAvail := f.SeatsAvailable - diff
+		s.flightSvc.Update(ctx, b.FlightID, flights.UpdateFlightRequest{SeatsAvailable: &newAvail})
+		b.Seats = seats
+		b.Amount = f.Price * int64(seats)
+	}
+
+	if err := s.store.UpdateBooking(ctx, b); err != nil {
+		return nil, apperrors.Internal(err)
+	}
+
+	// Send updated booking email
+	s.publishUpdate(ctx, b)
+
 	return b, nil
+}
+
+// publishUpdate publishes a booking updated event for email notification
+func (s *Service) publishUpdate(ctx context.Context, b *Booking) {
+	if s.publisher == nil {
+		return
+	}
+	flightNumber := ""
+	departureTime := ""
+	arrivalTime := ""
+	if f, err := s.flightSvc.GetByID(ctx, b.FlightID); err == nil {
+		flightNumber = f.FlightNumber
+		departureTime = f.DepartureTime.Format("Monday, January 2, 2006 at 3:04 PM")
+		arrivalTime = f.ArrivalTime.Format("Monday, January 2, 2006 at 3:04 PM")
+	}
+	s.publisher.PublishBookingConfirmed(ctx, events.BookingConfirmedEvent{
+		BookingID:      b.ID,
+		UserID:         b.UserID,
+		FlightID:       b.FlightID,
+		FlightNumber:   flightNumber,
+		DepartureTime:  departureTime,
+		ArrivalTime:    arrivalTime,
+		PassengerName:  b.PassengerName,
+		PassengerEmail: b.PassengerEmail,
+		Seats:          b.Seats,
+		AmountCents:    b.Amount,
+		Status:         "updated",
+	})
 }
 
 func (s *Service) GetByID(ctx context.Context, id string) (*Booking, *apperrors.AppError) {

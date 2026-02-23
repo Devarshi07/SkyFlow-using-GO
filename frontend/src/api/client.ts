@@ -157,6 +157,15 @@ export interface Booking {
   created_at: string;
 }
 
+export interface EditBookingResponse {
+  booking: Booking;
+  needs_payment: boolean;
+  payment_intent_id?: string;
+  amount_due?: number;
+  old_amount?: number;
+  new_amount?: number;
+}
+
 export interface CreateBookingResponse {
   booking_id: string;
   payment_intent_id?: string;
@@ -254,8 +263,13 @@ export const bookingsApi = {
       method: 'POST',
     }),
   edit: (bookingId: string, data: { flight_id?: string; seats?: number; passenger_name?: string; passenger_email?: string; passenger_phone?: string }) =>
-    request<Booking>(`/bookings/${bookingId}`, {
+    request<EditBookingResponse>(`/bookings/${bookingId}`, {
       method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  confirmEdit: (bookingId: string, data: { payment_intent_id: string; new_flight_id: string; new_seats: number }) =>
+    request<Booking>(`/bookings/${bookingId}/confirm-edit`, {
+      method: 'POST',
       body: JSON.stringify(data),
     }),
   get: (id: string) => request<Booking>(`/bookings/${id}`),

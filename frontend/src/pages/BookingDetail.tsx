@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { bookingsApi, flightsApi, citiesApi, airportsApi, type Booking, type Flight, type City, type Airport, ApiError } from '../api/client';
+import { gqlApi } from '../api/graphql';
 import { useAuth } from '../context/AuthContext';
 import './BookingDetail.css';
 
@@ -325,6 +326,7 @@ export function BookingDetail() {
       {editOpen && booking && (
         <EditBookingModal
           booking={booking}
+          flight={flight}
           onClose={() => setEditOpen(false)}
           onSaved={(updated) => {
             setBooking(updated);
@@ -339,71 +341,255 @@ export function BookingDetail() {
   );
 }
 
-function EditBookingModal({ booking, onClose, onSaved }: {
+type EditTab = 'passenger' | 'flight';
+
+function EditBookingModal({ booking, flight: currentFlight, onClose, onSaved }: {
   booking: Booking;
+  flight: Flight | null;
   onClose: () => void;
   onSaved: (b: Booking) => void;
 }) {
+  const navigate = useNavigate();
+  const [tab, setTab] = useState<EditTab>('passenger');
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  // Passenger fields
   const [name, setName] = useState(booking.passenger_name);
   const [email, setEmail] = useState(booking.passenger_email);
   const [phone, setPhone] = useState(booking.passenger_phone || '');
   const [seats, setSeats] = useState(booking.seats);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+  // Flight change fields
+  const [allAirports, setAllAirports] = useState<Airport[]>([]);
+  const [allCities, setAllCities] = useState<City[]>([]);
+  const [origin, setOrigin] = useState('');
+  const [dest, setDest] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [searchResults, setSearchResults] = useState<Flight[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [searched, setSearched] = useState(false);
+  const [selectedFlightId, setSelectedFlightId] = useState<string | null>(null);
+
+  // Load airports/cities for dropdowns
+  useEffect(() => {
+    gqlApi.airportsAndCities().then(d => {
+      setAllAirports(d.airports || []);
+      setAllCities(d.cities || []);
+    }).catch(() => {});
+  }, []);
+
+  function cityName(cityId: string) {
+    return allCities.find(c => c.id === cityId)?.name || '';
+  }
+
+  async function handleFlightSearch() {
+    if (!origin || !dest || !date) return;
+    setSearching(true);
+    setSearched(true);
+    setSelectedFlightId(null);
     try {
-      const updated = await bookingsApi.edit(booking.id, {
+      const res = await gqlApi.searchFlights(origin, dest, date);
+      setSearchResults(res.searchFlights.flights || []);
+    } catch {
+      setSearchResults([]);
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  // Price diff calculation
+  const selectedFlight = searchResults.find(f => f.id === selectedFlightId);
+  const currentAmount = booking.amount;
+  const newAmount = selectedFlight
+    ? selectedFlight.price * (seats > 0 ? seats : booking.seats)
+    : currentFlight
+      ? currentFlight.price * seats
+      : currentAmount;
+  const priceDiff = selectedFlightId && selectedFlightId !== booking.flight_id
+    ? newAmount - currentAmount
+    : (seats !== booking.seats && currentFlight)
+      ? (currentFlight.price * seats) - currentAmount
+      : 0;
+
+  async function handleSave() {
+    setError('');
+    setSaving(true);
+    try {
+      const payload: Record<string, unknown> = {
         passenger_name: name,
         passenger_email: email,
         passenger_phone: phone,
         seats,
-      });
-      onSaved(updated);
+      };
+      if (selectedFlightId && selectedFlightId !== booking.flight_id) {
+        payload.flight_id = selectedFlightId;
+      }
+      const res = await bookingsApi.edit(booking.id, payload as any);
+
+      if (res.needs_payment && res.payment_intent_id) {
+        // Redirect to checkout for the price difference
+        const params = new URLSearchParams();
+        params.set('booking_id', booking.id);
+        params.set('payment_intent_id', res.payment_intent_id);
+        params.set('amount', (res.amount_due || 0).toString());
+        params.set('flight_id', selectedFlightId || booking.flight_id);
+        params.set('name', name);
+        params.set('email', email);
+        params.set('edit_confirm', 'true');
+        params.set('new_flight_id', selectedFlightId || '');
+        params.set('new_seats', seats.toString());
+        navigate(`/checkout?${params.toString()}`);
+        return;
+      }
+
+      onSaved(res.booking);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to update booking');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   }
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={e => e.stopPropagation()}>
+      <div className="modal-content edit-modal-wide" onClick={e => e.stopPropagation()}>
         <h2>Edit Booking</h2>
         <p style={{ color: 'var(--text-muted)', marginBottom: '1rem', fontSize: '0.85rem' }}>
           Booking ID: {booking.id.slice(0, 8)}...
         </p>
 
+        {/* Tabs */}
+        <div className="edit-tabs">
+          <button className={`edit-tab ${tab === 'passenger' ? 'active' : ''}`} onClick={() => setTab('passenger')}>
+            Passenger Details
+          </button>
+          <button className={`edit-tab ${tab === 'flight' ? 'active' : ''}`} onClick={() => setTab('flight')}>
+            Change Flight
+          </button>
+        </div>
+
         {error && <div className="auth-error">{error}</div>}
 
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Passenger Name</label>
-            <input value={name} onChange={e => setName(e.target.value)} required />
+        {/* Passenger tab */}
+        {tab === 'passenger' && (
+          <div className="edit-tab-content">
+            <div className="form-group">
+              <label>Passenger Name</label>
+              <input value={name} onChange={e => setName(e.target.value)} required />
+            </div>
+            <div className="form-group">
+              <label>Email</label>
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+            </div>
+            <div className="form-group">
+              <label>Phone</label>
+              <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label>Seats</label>
+              <input type="number" min={1} max={10} value={seats} onChange={e => setSeats(Number(e.target.value))} />
+            </div>
           </div>
-          <div className="form-group">
-            <label>Email</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+        )}
+
+        {/* Flight tab */}
+        {tab === 'flight' && (
+          <div className="edit-tab-content">
+            <div className="edit-flight-search">
+              <div className="form-group">
+                <label>From</label>
+                <select value={origin} onChange={e => setOrigin(e.target.value)}>
+                  <option value="">Select origin</option>
+                  {allAirports.map(a => (
+                    <option key={a.id} value={a.id}>{a.code} — {cityName(a.city_id)}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>To</label>
+                <select value={dest} onChange={e => setDest(e.target.value)}>
+                  <option value="">Select destination</option>
+                  {allAirports.filter(a => a.id !== origin).map(a => (
+                    <option key={a.id} value={a.id}>{a.code} — {cityName(a.city_id)}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Date</label>
+                <input type="date" value={date} onChange={e => setDate(e.target.value)} />
+              </div>
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{ width: '100%', marginTop: '0.25rem' }}
+                onClick={handleFlightSearch}
+                disabled={!origin || !dest || !date || searching}
+              >
+                {searching ? <span className="spinner" /> : 'Search Flights'}
+              </button>
+            </div>
+
+            {/* Search results */}
+            {searched && !searching && searchResults.length === 0 && (
+              <p style={{ color: 'var(--text-muted)', textAlign: 'center', margin: '1rem 0', fontSize: '0.85rem' }}>
+                No flights found for this route and date.
+              </p>
+            )}
+
+            {searchResults.length > 0 && (
+              <div className="edit-flight-results">
+                {searchResults.map(f => {
+                  const isCurrent = f.id === booking.flight_id;
+                  const isSelected = f.id === selectedFlightId;
+                  return (
+                    <div
+                      key={f.id}
+                      className={`edit-flight-option ${isSelected ? 'selected' : ''} ${isCurrent ? 'current' : ''}`}
+                      onClick={() => !isCurrent && setSelectedFlightId(f.id)}
+                    >
+                      <div className="edit-flight-option-top">
+                        <span className="edit-flight-num">{f.flight_number}</span>
+                        {isCurrent && <span className="edit-flight-current-badge">Current</span>}
+                        {isSelected && <span className="edit-flight-selected-badge">Selected</span>}
+                        <span className="edit-flight-price">${(f.price / 100).toFixed(2)}</span>
+                      </div>
+                      <div className="edit-flight-option-bottom">
+                        <span>{new Date(f.departure_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
+                        <span style={{ color: 'var(--text-muted)' }}>→</span>
+                        <span>{new Date(f.arrival_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
+                        <span style={{ color: 'var(--text-muted)', marginLeft: 'auto', fontSize: '0.8rem' }}>{f.seats_available} seats</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
-          <div className="form-group">
-            <label>Phone</label>
-            <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} />
+        )}
+
+        {/* Price difference notice */}
+        {priceDiff !== 0 && (
+          <div className={`edit-price-diff ${priceDiff > 0 ? 'diff-increase' : 'diff-decrease'}`}>
+            {priceDiff > 0
+              ? `Additional payment of ${(priceDiff / 100).toFixed(2)} required`
+              : `You save ${(Math.abs(priceDiff) / 100).toFixed(2)} with this change`
+            }
           </div>
-          <div className="form-group">
-            <label>Seats</label>
-            <input type="number" min={1} max={10} value={seats} onChange={e => setSeats(Number(e.target.value))} />
-          </div>
-          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
-            <button type="button" className="btn btn-secondary" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
-            <button type="submit" className="btn btn-primary" disabled={loading} style={{ flex: 1 }}>
-              {loading ? <span className="spinner" /> : 'Save Changes'}
-            </button>
-          </div>
-        </form>
+        )}
+
+        {/* Save / Cancel */}
+        <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.25rem' }}>
+          <button type="button" className="btn btn-secondary" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
+          <button type="button" className="btn btn-primary" disabled={saving} onClick={handleSave} style={{ flex: 1 }}>
+            {saving
+              ? <span className="spinner" />
+              : priceDiff > 0
+                ? `Pay ${(priceDiff / 100).toFixed(2)} & Save`
+                : 'Save Changes'
+            }
+          </button>
+        </div>
       </div>
     </div>
   );

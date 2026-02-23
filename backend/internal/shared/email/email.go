@@ -57,14 +57,26 @@ type BookingEmail struct {
 }
 
 func (s *Sender) SendBookingConfirmation(e BookingEmail) error {
-	subject := fmt.Sprintf("SkyFlow Booking Confirmed — %s", e.FlightNumber)
+	isUpdate := e.Status == "updated"
+	var subject string
+	var intro string
+	var heading string
+	if isUpdate {
+		subject = fmt.Sprintf("SkyFlow Booking Updated — %s", e.FlightNumber)
+		intro = "Your booking has been updated! Here are your new details:"
+		heading = "BOOKING UPDATE"
+	} else {
+		subject = fmt.Sprintf("SkyFlow Booking Confirmed — %s", e.FlightNumber)
+		intro = "Your booking has been confirmed! Here are your details:"
+		heading = "BOOKING CONFIRMATION"
+	}
 
 	body := fmt.Sprintf(`Dear %s,
 
-Your booking has been confirmed! Here are your details:
+%s
 
 ══════════════════════════════════════════
-  BOOKING CONFIRMATION
+  %s
 ══════════════════════════════════════════
 
   Booking ID:    %s
@@ -81,7 +93,7 @@ Thank you for choosing SkyFlow!
 We wish you a pleasant journey.
 
 — The SkyFlow Team
-`, e.PassengerName, e.BookingID, e.FlightNumber, e.DepartureTime, e.ArrivalTime, e.Seats, e.Amount, e.Status)
+`, e.PassengerName, intro, heading, e.BookingID, e.FlightNumber, e.DepartureTime, e.ArrivalTime, e.Seats, e.Amount, e.Status)
 
 	return s.send(e.To, subject, body)
 }

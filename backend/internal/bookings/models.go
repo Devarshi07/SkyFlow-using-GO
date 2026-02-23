@@ -43,3 +43,12 @@ type EditBookingRequest struct {
 	PassengerEmail string `json:"passenger_email,omitempty"`
 	PassengerPhone string `json:"passenger_phone,omitempty"`
 }
+
+type EditBookingResponse struct {
+	Booking         *Booking `json:"booking"`
+	NeedsPayment    bool     `json:"needs_payment"`
+	PaymentIntentID string   `json:"payment_intent_id,omitempty"`
+	AmountDue       int64    `json:"amount_due,omitempty"`
+	OldAmount       int64    `json:"old_amount,omitempty"`
+	NewAmount       int64    `json:"new_amount,omitempty"`
+}

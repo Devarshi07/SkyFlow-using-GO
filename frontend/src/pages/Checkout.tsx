@@ -27,6 +27,11 @@ export function Checkout() {
   const passengerName = searchParams.get('name') || '';
   const passengerEmail = searchParams.get('email') || '';
 
+  // Edit-confirm flow
+  const isEditConfirm = searchParams.get('edit_confirm') === 'true';
+  const newFlightId = searchParams.get('new_flight_id') || '';
+  const newSeats = parseInt(searchParams.get('new_seats') || '0', 10);
+
   const [flight, setFlight] = useState<Flight | null>(null);
   const [cardNumber, setCardNumber] = useState('');
   const [expiry, setExpiry] = useState('');
@@ -55,7 +60,17 @@ export function Checkout() {
     setError('');
     setProcessing(true);
     try {
-      navigate(`/bookings/${bookingId}?just_paid=true&pi=${paymentIntentId}`, { replace: true });
+      if (isEditConfirm) {
+        // Confirm the edit — pays the diff and applies the flight/seat change
+        await bookingsApi.confirmEdit(bookingId, {
+          payment_intent_id: paymentIntentId,
+          new_flight_id: newFlightId,
+          new_seats: newSeats,
+        });
+        navigate(`/bookings/${bookingId}?just_paid=true&pi=${paymentIntentId}`, { replace: true });
+      } else {
+        navigate(`/bookings/${bookingId}?just_paid=true&pi=${paymentIntentId}`, { replace: true });
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Payment failed. Please try again.');
       setProcessing(false);
@@ -72,7 +87,7 @@ export function Checkout() {
         <div className="checkout-summary">
           <div className="summary-header">
             <span className="summary-lock">&#128274;</span>
-            <h2>Order Summary</h2>
+            <h2>{isEditConfirm ? 'Additional Payment' : 'Order Summary'}</h2>
           </div>
 
           {flight && (
