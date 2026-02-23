@@ -1,6 +1,7 @@
 # SkyFlow – Flight Booking API
 
 Go microservices backend for a flight booking system.
+It may take time to load the cities as I am using the Azure 0 replica stratergy to keep the cost to 0 so please bear with it for 3 - 4 mins. Also the API might feel slow (based on location) because the Free tier didnt have any servers in US which was available in my Free Tier plan. You will get the Email and everything it will just take 30 - 50 seconds thats all.
 
 ## Structure
 
