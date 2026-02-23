@@ -13,6 +13,23 @@
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
+.post-payment-card {
+  animation: ppSlideUp 0.5s ease-out;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 1rem 0;
+}
+
+@keyframes ppSlideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ══════════════════════════════════════════
+   NORMAL BOOKING VIEW
+   ══════════════════════════════════════════ */
+
 .payment-success-banner {
   display: flex;
   align-items: center;
@@ -85,6 +102,11 @@
   color: var(--text-muted);
 }
 
+.status-text-confirmed {
+  color: var(--success);
+  font-weight: 600;
+}
+
 .booking-section {
   margin-bottom: 1.5rem;
 }
@@ -128,4 +150,408 @@
 
 .booking-actions .btn:hover {
   color: #fff;
+}
+
+/* ══════════════════════════════════════════
+   POST-PAYMENT EXPERIENCE
+   ══════════════════════════════════════════ */
+
+/* Hero */
+.pp-hero {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.pp-hero h1 {
+  font-size: 1.6rem;
+  color: #fff;
+  margin-bottom: 0.3rem;
+}
+
+.pp-sub {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+/* Animated checkmark */
+.pp-checkmark {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 1rem;
+}
+
+.pp-checkmark-svg {
+  width: 72px;
+  height: 72px;
+}
+
+.pp-circle {
+  stroke: var(--success, #34d399);
+  stroke-width: 2;
+  stroke-dasharray: 166;
+  stroke-dashoffset: 166;
+  animation: ppStroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+
+.pp-check {
+  stroke: var(--success, #34d399);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: ppStroke 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.5s forwards;
+}
+
+@keyframes ppStroke {
+  to { stroke-dashoffset: 0; }
+}
+
+/* Pending spinner */
+.pp-pending-spinner-wrap {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pp-pending-spinner {
+  width: 56px;
+  height: 56px;
+  border: 3px solid rgba(251, 191, 36, 0.15);
+  border-top-color: var(--warning, #fbbf24);
+  border-radius: 50%;
+  animation: ppSpin 1s linear infinite;
+}
+
+@keyframes ppSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* Badge */
+.pp-badge-bar {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.pp-badge {
+  display: inline-block;
+  padding: 0.4rem 1.2rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  transition: all 0.4s ease;
+}
+
+.pp-badge-pending {
+  background: rgba(251, 191, 36, 0.12);
+  color: var(--warning, #fbbf24);
+}
+
+.pp-badge-confirmed {
+  background: rgba(52, 211, 153, 0.12);
+  color: var(--success, #34d399);
+  animation: ppBadgePop 0.4s ease-out;
+}
+
+@keyframes ppBadgePop {
+  0% { transform: scale(0.8); opacity: 0; }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Countdown at top */
+.pp-countdown-top {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  animation: ppFadeIn 0.4s ease-out;
+}
+
+/* Ticket */
+.pp-ticket {
+  background: #112240;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  transition: border-color 0.5s ease, box-shadow 0.5s ease;
+}
+
+.pp-ticket-pending {
+  border-color: rgba(251, 191, 36, 0.15);
+}
+
+.pp-ticket-confirmed {
+  border-color: rgba(52, 211, 153, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(52, 211, 153, 0.1);
+}
+
+.pp-ticket-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.pp-ticket-airline {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--accent, #60a5fa);
+}
+
+.pp-ticket-flight {
+  font-family: monospace;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+}
+
+.pp-ticket-route {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.75rem 1.5rem;
+  gap: 1rem;
+}
+
+.pp-endpoint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.pp-time {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.pp-city {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+}
+
+.pp-date {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+.pp-arrow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--accent, #60a5fa);
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.pp-line {
+  width: 30px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.pp-tear {
+  height: 1px;
+  margin: 0 1rem;
+  border-top: 2px dashed rgba(255, 255, 255, 0.1);
+}
+
+.pp-ticket-details {
+  padding: 1.25rem 1.5rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.pp-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.pp-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.pp-val {
+  font-size: 0.9rem;
+  color: #fff;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Sections */
+.pp-section {
+  background: #112240;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.pp-section h3 {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.75rem;
+}
+
+.pp-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.4rem 0;
+  font-size: 0.85rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.pp-row:last-child {
+  border-bottom: none;
+}
+
+.pp-row span:first-child {
+  color: var(--text-muted);
+}
+
+.pp-row-total {
+  padding: 0.65rem 0;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.pp-amount {
+  color: var(--success, #34d399);
+  font-size: 1.15rem;
+}
+
+.pp-paid {
+  color: var(--success, #34d399);
+  font-weight: 600;
+}
+
+.pp-processing {
+  color: var(--warning, #fbbf24);
+  font-weight: 600;
+}
+
+.pp-mono {
+  font-family: monospace;
+  font-size: 0.75rem;
+  word-break: break-all;
+}
+
+/* Email notice */
+.pp-email-notice {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(96, 165, 250, 0.08);
+  border: 1px solid rgba(96, 165, 250, 0.18);
+  border-radius: 10px;
+  padding: 0.9rem 1.25rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  animation: ppFadeIn 0.4s ease-out;
+}
+
+.pp-email-notice span {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.pp-email-notice strong {
+  color: #fff;
+}
+
+/* Footer / countdown */
+.pp-footer {
+  text-align: center;
+  animation: ppFadeIn 0.4s ease-out;
+}
+
+@keyframes ppFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.pp-countdown {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+}
+
+.pp-countdown strong {
+  color: var(--accent, #60a5fa);
+  font-size: 1rem;
+}
+
+.pp-progress {
+  width: 100%;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 1.25rem;
+}
+
+.pp-progress-bar {
+  height: 100%;
+  background: var(--accent, #60a5fa);
+  border-radius: 3px;
+  transition: width 1s linear;
+}
+
+.pp-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.pp-actions .btn {
+  flex: 1;
+}
+
+/* ══════════════════════════════════════════
+   RESPONSIVE
+   ══════════════════════════════════════════ */
+
+@media (max-width: 500px) {
+  .pp-ticket-route {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .pp-arrow {
+    transform: rotate(90deg);
+  }
+
+  .pp-ticket-details {
+    grid-template-columns: 1fr;
+  }
+
+  .pp-actions {
+    flex-direction: column;
+  }
 }

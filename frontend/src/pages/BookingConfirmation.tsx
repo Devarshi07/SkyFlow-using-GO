@@ -131,6 +131,18 @@ export function BookingConfirmation() {
           )}
         </div>
 
+        {/* ── Countdown (top) ── */}
+        {isConfirmed && (
+          <div className="confirmation-footer confirmation-footer-top">
+            <div className="confirmation-countdown">
+              Redirecting to home in <strong>{countdown}s</strong>
+            </div>
+            <div className="confirmation-progress">
+              <div className="confirmation-progress-bar" style={{ width: `${((8 - countdown) / 8) * 100}%` }} />
+            </div>
+          </div>
+        )}
+
         {/* ── Status badge ── */}
         <div className="confirmation-status-bar">
           <span className={`confirmation-badge ${isConfirmed ? 'badge-confirmed' : 'badge-pending'}`}>
@@ -233,23 +245,15 @@ export function BookingConfirmation() {
           </div>
         )}
 
-        {/* ── Countdown & actions (only when confirmed) ── */}
+        {/* ── Actions (only when confirmed) ── */}
         {isConfirmed && (
-          <div className="confirmation-footer">
-            <div className="confirmation-countdown">
-              Redirecting to home in <strong>{countdown}s</strong>
-            </div>
-            <div className="confirmation-progress">
-              <div className="confirmation-progress-bar" style={{ width: `${((8 - countdown) / 8) * 100}%` }} />
-            </div>
-            <div className="confirmation-actions">
-              <button className="btn btn-secondary" onClick={() => navigate(`/bookings/${booking.id}`)}>
-                View Booking
-              </button>
-              <button className="btn btn-primary" onClick={() => navigate('/', { replace: true })}>
-                Go Home Now
-              </button>
-            </div>
+          <div className="confirmation-actions">
+            <button className="btn btn-secondary" onClick={() => navigate(`/bookings/${booking.id}`)}>
+              View Booking Details
+            </button>
+            <button className="btn btn-primary" onClick={() => navigate('/', { replace: true })}>
+              Go Home Now
+            </button>
           </div>
         )}
       </div>

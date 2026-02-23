@@ -55,7 +55,7 @@ export function Checkout() {
     setError('');
     setProcessing(true);
     try {
-      navigate(`/booking-confirmed?booking_id=${bookingId}&payment_intent_id=${paymentIntentId}`, { replace: true });
+      navigate(`/bookings/${bookingId}?just_paid=true&pi=${paymentIntentId}`, { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Payment failed. Please try again.');
       setProcessing(false);

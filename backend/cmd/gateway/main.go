@@ -82,9 +82,7 @@ func main() {
 			defer rdb.Close()
 			redisCache = cache.NewRedisCache(rdb, 0)
 			flightStore = flights.NewCachedFlightStore(flightStore, redisCache)
-			cityStore = cities.NewCachedCityStore(cityStore, redisCache)
-			airportStore = airports.NewCachedAirportStore(airportStore, redisCache)
-			log.Info("redis cache enabled")
+			log.Info("redis cache enabled (flight search only)")
 		}
 	}
 
