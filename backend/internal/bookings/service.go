@@ -143,6 +143,117 @@ func (s *Service) Create(ctx context.Context, userID string, req CreateBookingRe
 	}, nil
 }
 
+func (s *Service) CreateRoundTrip(ctx context.Context, userID string, req RoundTripRequest) (*RoundTripResponse, *apperrors.AppError) {
+	if req.OutboundFlightID == "" || req.ReturnFlightID == "" || req.PassengerName == "" || req.PassengerEmail == "" {
+		return nil, apperrors.BadRequest("outbound_flight_id, return_flight_id, passenger_name, passenger_email required")
+	}
+	if req.Seats <= 0 {
+		req.Seats = 1
+	}
+
+	// Get both flights
+	outFlight, appErr := s.flightSvc.GetByID(ctx, req.OutboundFlightID)
+	if appErr != nil {
+		return nil, appErr
+	}
+	retFlight, appErr := s.flightSvc.GetByID(ctx, req.ReturnFlightID)
+	if appErr != nil {
+		return nil, appErr
+	}
+
+	if outFlight.SeatsAvailable < req.Seats {
+		return nil, apperrors.BadRequest("not enough seats on outbound flight")
+	}
+	if retFlight.SeatsAvailable < req.Seats {
+		return nil, apperrors.BadRequest("not enough seats on return flight")
+	}
+
+	outAmount := outFlight.Price * int64(req.Seats)
+	retAmount := retFlight.Price * int64(req.Seats)
+	totalAmount := outAmount + retAmount
+
+	// Reserve seats on both flights
+	newOutAvail := outFlight.SeatsAvailable - req.Seats
+	s.flightSvc.Update(ctx, req.OutboundFlightID, flights.UpdateFlightRequest{SeatsAvailable: &newOutAvail})
+	newRetAvail := retFlight.SeatsAvailable - req.Seats
+	s.flightSvc.Update(ctx, req.ReturnFlightID, flights.UpdateFlightRequest{SeatsAvailable: &newRetAvail})
+
+	// Create both bookings
+	outBooking := &Booking{
+		UserID: userID, FlightID: req.OutboundFlightID, Seats: req.Seats, Amount: outAmount,
+		PassengerName: req.PassengerName, PassengerEmail: req.PassengerEmail, PassengerPhone: req.PassengerPhone, Status: "pending",
+	}
+	outCreated, err := s.store.Create(ctx, outBooking)
+	if err != nil {
+		s.restoreSeats(ctx, req.OutboundFlightID, req.Seats)
+		s.restoreSeats(ctx, req.ReturnFlightID, req.Seats)
+		return nil, apperrors.Internal(err)
+	}
+
+	retBooking := &Booking{
+		UserID: userID, FlightID: req.ReturnFlightID, Seats: req.Seats, Amount: retAmount,
+		PassengerName: req.PassengerName, PassengerEmail: req.PassengerEmail, PassengerPhone: req.PassengerPhone, Status: "pending",
+	}
+	retCreated, err := s.store.Create(ctx, retBooking)
+	if err != nil {
+		s.restoreSeats(ctx, req.OutboundFlightID, req.Seats)
+		s.restoreSeats(ctx, req.ReturnFlightID, req.Seats)
+		return nil, apperrors.Internal(err)
+	}
+
+	frontendOrigin := os.Getenv("FRONTEND_URL")
+	if frontendOrigin == "" {
+		frontendOrigin = "http://localhost:5173"
+	}
+
+	if s.paymentSvc.IsLive() {
+		successURL := fmt.Sprintf("%s/bookings/%s?payment=success&session_id={CHECKOUT_SESSION_ID}&return_booking_id=%s",
+			frontendOrigin, outCreated.ID, retCreated.ID)
+		cancelURL := frontendOrigin + "/flights?payment=cancelled"
+
+		desc := fmt.Sprintf("Round Trip: %s + %s", outFlight.FlightNumber, retFlight.FlightNumber)
+		sessResp, payErr := s.paymentSvc.CreateCheckoutSession(
+			totalAmount, "usd", outCreated.ID, desc, successURL, cancelURL,
+		)
+		if payErr != nil {
+			s.restoreSeats(ctx, req.OutboundFlightID, req.Seats)
+			s.restoreSeats(ctx, req.ReturnFlightID, req.Seats)
+			return nil, payErr
+		}
+
+		_ = s.store.UpdatePaymentIntent(ctx, outCreated.ID, sessResp.PaymentIntentID)
+		_ = s.store.UpdatePaymentIntent(ctx, retCreated.ID, sessResp.PaymentIntentID)
+
+		return &RoundTripResponse{
+			OutboundBookingID: outCreated.ID,
+			ReturnBookingID:   retCreated.ID,
+			PaymentIntentID:   sessResp.PaymentIntentID,
+			CheckoutURL:       sessResp.CheckoutURL,
+			TotalAmount:       totalAmount,
+			Status:            "pending",
+		}, nil
+	}
+
+	// Demo mode
+	intentResp, payErr := s.paymentSvc.CreateIntent(payments.CreateIntentRequest{Amount: totalAmount, Currency: "usd"})
+	if payErr != nil {
+		s.restoreSeats(ctx, req.OutboundFlightID, req.Seats)
+		s.restoreSeats(ctx, req.ReturnFlightID, req.Seats)
+		return nil, payErr
+	}
+
+	_ = s.store.UpdatePaymentIntent(ctx, outCreated.ID, intentResp.PaymentIntentID)
+	_ = s.store.UpdatePaymentIntent(ctx, retCreated.ID, intentResp.PaymentIntentID)
+
+	return &RoundTripResponse{
+		OutboundBookingID: outCreated.ID,
+		ReturnBookingID:   retCreated.ID,
+		PaymentIntentID:   intentResp.PaymentIntentID,
+		TotalAmount:       totalAmount,
+		Status:            "pending",
+	}, nil
+}
+
 func (s *Service) Confirm(ctx context.Context, paymentIntentID string) (*Booking, *apperrors.AppError) {
 	b, err := s.store.GetByPaymentIntent(ctx, paymentIntentID)
 	if err != nil {
@@ -181,6 +292,29 @@ func (s *Service) Confirm(ctx context.Context, paymentIntentID string) (*Booking
 	// Publish event to RabbitMQ for email notification
 	s.publishConfirmation(ctx, b)
 
+	return b, nil
+}
+
+// ConfirmByID directly confirms a booking by its ID (used for round-trip return leg)
+func (s *Service) ConfirmByID(ctx context.Context, bookingID string) (*Booking, *apperrors.AppError) {
+	b, err := s.store.GetByID(ctx, bookingID)
+	if err != nil {
+		return nil, apperrors.NotFound("booking")
+	}
+	if b.Status == "confirmed" {
+		return b, nil
+	}
+
+	// For mock mode, just confirm; for Stripe, the payment was already verified on the outbound leg
+	if !s.paymentSvc.IsLive() && b.PaymentIntentID != "" {
+		s.paymentSvc.Confirm(b.PaymentIntentID)
+	}
+
+	if err := s.store.UpdateStatus(ctx, b.ID, "confirmed"); err != nil {
+		return nil, apperrors.Internal(err)
+	}
+	b.Status = "confirmed"
+	s.publishConfirmation(ctx, b)
 	return b, nil
 }
 

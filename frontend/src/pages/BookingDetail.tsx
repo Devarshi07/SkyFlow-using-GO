@@ -23,12 +23,18 @@ export function BookingDetail() {
   const editNewFlightId = searchParams.get('new_flight_id') || '';
   const editNewSeats = parseInt(searchParams.get('new_seats') || '0', 10);
 
+  // Round-trip: return booking to also confirm
+  const returnBookingId = searchParams.get('return_booking_id') || '';
+
   const [booking, setBooking] = useState<Booking | null>(null);
   const [flight, setFlight] = useState<Flight | null>(null);
+  const [returnBooking, setReturnBooking] = useState<Booking | null>(null);
+  const [returnFlight, setReturnFlight] = useState<Flight | null>(null);
   const [cities, setCities] = useState<City[]>([]);
   const [airports, setAirports] = useState<Airport[]>([]);
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
+  const isRoundTrip = !!returnBookingId;
 
   // Post-payment flow state
   const [postPaymentPhase, setPostPaymentPhase] = useState<'none' | 'pending' | 'confirmed'>('none');
@@ -52,6 +58,16 @@ export function BookingDetail() {
         const f = await flightsApi.get(b.flight_id);
         setFlight(f);
       } catch { /* ignore */ }
+
+      // Load return booking if round-trip
+      if (returnBookingId) {
+        try {
+          const rb = await bookingsApi.get(returnBookingId);
+          setReturnBooking(rb);
+          const rf = await flightsApi.get(rb.flight_id);
+          setReturnFlight(rf);
+        } catch { /* ignore */ }
+      }
 
       // Determine if this is a post-payment flow
       if (editPaid) {
@@ -92,8 +108,16 @@ export function BookingDetail() {
           } catch { /* ignore */ }
         } else if (paymentIntentId) {
           confirmed = await bookingsApi.confirm(paymentIntentId);
+          // If round-trip, also confirm the return booking
+          if (returnBookingId) {
+            try { await bookingsApi.confirmByBookingId(returnBookingId, ''); } catch { /* may already be confirmed */ }
+          }
         } else if (sessionId && id) {
           confirmed = await bookingsApi.confirmByBookingId(id, sessionId);
+          // If round-trip, also confirm the return booking
+          if (returnBookingId) {
+            try { await bookingsApi.confirmByBookingId(returnBookingId, sessionId); } catch { /* may already be confirmed */ }
+          }
         } else if (id) {
           confirmed = await bookingsApi.confirmByBookingId(id, '');
         } else {
@@ -166,8 +190,8 @@ export function BookingDetail() {
                     <path className="pp-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
                   </svg>
                 </div>
-                <h1>Booking Confirmed!</h1>
-                <p className="pp-sub">Your flight has been booked successfully</p>
+                <h1>{isRoundTrip ? 'Round Trip Confirmed!' : 'Booking Confirmed!'}</h1>
+                <p className="pp-sub">{isRoundTrip ? 'Both your flights have been booked successfully' : 'Your flight has been booked successfully'}</p>
               </>
             ) : (
               <>
@@ -202,7 +226,7 @@ export function BookingDetail() {
           {/* Ticket */}
           <div className={`pp-ticket ${isConfirmed ? 'pp-ticket-confirmed' : 'pp-ticket-pending'}`}>
             <div className="pp-ticket-header">
-              <span className="pp-ticket-airline">✈ SkyFlow</span>
+              <span className="pp-ticket-airline">✈ SkyFlow{isRoundTrip ? ' · Outbound' : ''}</span>
               <span className="pp-ticket-flight">{flight?.flight_number || '—'}</span>
             </div>
 
@@ -236,12 +260,56 @@ export function BookingDetail() {
             </div>
           </div>
 
+          {/* Return ticket (round-trip) */}
+          {isRoundTrip && returnFlight && returnBooking && (
+            <div className={`pp-ticket ${isConfirmed ? 'pp-ticket-confirmed' : 'pp-ticket-pending'}`}>
+              <div className="pp-ticket-header">
+                <span className="pp-ticket-airline">✈ SkyFlow · Return</span>
+                <span className="pp-ticket-flight">{returnFlight.flight_number}</span>
+              </div>
+              <div className="pp-ticket-route">
+                <div className="pp-endpoint">
+                  <span className="pp-time">{new Date(returnFlight.departure_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
+                  <span className="pp-city">{getRouteLabel(returnFlight.origin_id)}</span>
+                  <span className="pp-date">{new Date(returnFlight.departure_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                </div>
+                <div className="pp-arrow">
+                  <div className="pp-line" />
+                  <span>✈</span>
+                  <div className="pp-line" />
+                </div>
+                <div className="pp-endpoint">
+                  <span className="pp-time">{new Date(returnFlight.arrival_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
+                  <span className="pp-city">{getRouteLabel(returnFlight.destination_id)}</span>
+                  <span className="pp-date">{new Date(returnFlight.arrival_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                </div>
+              </div>
+              <div className="pp-tear" />
+              <div className="pp-ticket-details">
+                <div className="pp-detail"><span className="pp-label">Passenger</span><span className="pp-val">{returnBooking.passenger_name}</span></div>
+                <div className="pp-detail"><span className="pp-label">Email</span><span className="pp-val">{returnBooking.passenger_email}</span></div>
+                {returnBooking.passenger_phone && <div className="pp-detail"><span className="pp-label">Phone</span><span className="pp-val">{returnBooking.passenger_phone}</span></div>}
+                <div className="pp-detail"><span className="pp-label">Seats</span><span className="pp-val">{returnBooking.seats}</span></div>
+              </div>
+            </div>
+          )}
+
           {/* Payment summary */}
           <div className="pp-section">
             <h3>Payment Summary</h3>
-            <div className="pp-row"><span>Price per seat</span><span>${pricePerSeat}</span></div>
-            <div className="pp-row"><span>Seats</span><span>× {booking.seats}</span></div>
-            <div className="pp-row pp-row-total"><span>Total Paid</span><span className="pp-amount">${amount}</span></div>
+            {isRoundTrip && returnBooking ? (
+              <>
+                <div className="pp-row"><span>Outbound</span><span>${(booking.amount / 100).toFixed(2)}</span></div>
+                <div className="pp-row"><span>Return</span><span>${(returnBooking.amount / 100).toFixed(2)}</span></div>
+                <div className="pp-row pp-row-total"><span>Total Paid</span><span className="pp-amount">${((booking.amount + returnBooking.amount) / 100).toFixed(2)}</span></div>
+              </>
+            ) : (
+              <>
+                <div className="pp-row"><span>Price per seat</span><span>${pricePerSeat}</span></div>
+                <div className="pp-row"><span>Seats</span><span>× {booking.seats}</span></div>
+                <div className="pp-row pp-row-total"><span>Total Paid</span><span className="pp-amount">${amount}</span></div>
+              </>
+            )}
             <div className="pp-row">
               <span>Payment Status</span>
               <span className={isConfirmed ? 'pp-paid' : 'pp-processing'}>{isConfirmed ? '✓ Paid' : '⏳ Processing...'}</span>
@@ -251,7 +319,10 @@ export function BookingDetail() {
           {/* Reference */}
           <div className="pp-section">
             <h3>Reference</h3>
-            <div className="pp-row"><span>Booking ID</span><span className="pp-mono">{booking.id}</span></div>
+            <div className="pp-row"><span>{isRoundTrip ? 'Outbound Booking' : 'Booking ID'}</span><span className="pp-mono">{booking.id}</span></div>
+            {isRoundTrip && returnBooking && (
+              <div className="pp-row"><span>Return Booking</span><span className="pp-mono">{returnBooking.id}</span></div>
+            )}
             <div className="pp-row"><span>Booked At</span><span>{new Date(booking.created_at).toLocaleString()}</span></div>
           </div>
 
@@ -260,7 +331,7 @@ export function BookingDetail() {
             <>
               <div className="pp-email-notice">
                 <span>📧</span>
-                <p>A confirmation email has been sent to <strong>{booking.passenger_email}</strong></p>
+                <p>{isRoundTrip ? 'Confirmation emails for both flights have' : 'A confirmation email has'} been sent to <strong>{booking.passenger_email}</strong></p>
               </div>
 
               <div className="pp-actions">

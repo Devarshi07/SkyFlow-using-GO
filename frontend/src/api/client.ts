@@ -167,6 +167,15 @@ export interface EditBookingResponse {
   new_amount?: number;
 }
 
+export interface RoundTripResponse {
+  outbound_booking_id: string;
+  return_booking_id: string;
+  payment_intent_id?: string;
+  checkout_url?: string;
+  total_amount: number;
+  status: string;
+}
+
 export interface CreateBookingResponse {
   booking_id: string;
   payment_intent_id?: string;
@@ -274,6 +283,11 @@ export const bookingsApi = {
       body: JSON.stringify(data),
     }),
   get: (id: string) => request<Booking>(`/bookings/${id}`),
+  createRoundTrip: (data: { outbound_flight_id: string; return_flight_id: string; seats: number; passenger_name: string; passenger_email: string; passenger_phone: string }) =>
+    request<RoundTripResponse>('/bookings/round-trip', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
   my: () => request<{ bookings: Booking[] }>('/bookings/my').then(r => r.bookings),
 };
 

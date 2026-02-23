@@ -32,6 +32,9 @@ export function Checkout() {
   const newFlightId = searchParams.get('new_flight_id') || '';
   const newSeats = parseInt(searchParams.get('new_seats') || '0', 10);
 
+  // Round-trip return booking
+  const returnBookingIdParam = searchParams.get('return_booking_id') || '';
+
   const [flight, setFlight] = useState<Flight | null>(null);
   const [cardNumber, setCardNumber] = useState('');
   const [expiry, setExpiry] = useState('');
@@ -69,7 +72,8 @@ export function Checkout() {
         });
         navigate(`/bookings/${bookingId}?just_paid=true&pi=${paymentIntentId}`, { replace: true });
       } else {
-        navigate(`/bookings/${bookingId}?just_paid=true&pi=${paymentIntentId}`, { replace: true });
+        const rtParam = returnBookingIdParam ? `&return_booking_id=${returnBookingIdParam}` : '';
+        navigate(`/bookings/${bookingId}?just_paid=true&pi=${paymentIntentId}${rtParam}`, { replace: true });
       }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Payment failed. Please try again.');

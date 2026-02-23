@@ -24,6 +24,7 @@ func NewHandler(svc *Service, log *logger.Logger) *Handler {
 
 func (h *Handler) Routes(r chi.Router) {
 	r.Post("/", h.Create)
+	r.Post("/round-trip", h.CreateRoundTrip)
 	r.Post("/confirm", h.Confirm)
 	r.Get("/my", h.ListMy)
 	r.Get("/{id}", h.GetByID)
@@ -45,6 +46,25 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	res, appErr := h.svc.Create(r.Context(), userID, req)
+	if appErr != nil {
+		response.WriteError(w, r, appErr.WithRequestID(middleware.GetRequestID(r.Context())), h.log)
+		return
+	}
+	response.WriteCreated(w, r, res)
+}
+
+func (h *Handler) CreateRoundTrip(w http.ResponseWriter, r *http.Request) {
+	userID := extractUserID(r)
+	if userID == "" {
+		response.WriteError(w, r, apperrors.Unauthorized(""), h.log)
+		return
+	}
+	var req RoundTripRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		response.WriteError(w, r, apperrors.BadRequest("invalid JSON"), h.log)
+		return
+	}
+	res, appErr := h.svc.CreateRoundTrip(r.Context(), userID, req)
 	if appErr != nil {
 		response.WriteError(w, r, appErr.WithRequestID(middleware.GetRequestID(r.Context())), h.log)
 		return
@@ -97,11 +117,8 @@ func (h *Handler) ConfirmByBookingID(w http.ResponseWriter, r *http.Request) {
 		response.WriteOK(w, r, booking)
 		return
 	}
-	if booking.PaymentIntentID == "" {
-		response.WriteError(w, r, apperrors.BadRequest("no payment intent for this booking"), h.log)
-		return
-	}
-	b, confirmErr := h.svc.Confirm(r.Context(), booking.PaymentIntentID)
+	// Try to confirm directly by booking ID (handles round-trip shared PI)
+	b, confirmErr := h.svc.ConfirmByID(r.Context(), id)
 	if confirmErr != nil {
 		response.WriteError(w, r, confirmErr.WithRequestID(middleware.GetRequestID(r.Context())), h.log)
 		return

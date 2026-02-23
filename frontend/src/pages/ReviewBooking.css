@@ -63,6 +63,25 @@
   border-bottom: 1px solid #f1f5f9;
 }
 
+.review-leg-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  margin-bottom: 0.3rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.review-leg-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e2e8f0;
+}
+
 .review-route-header h2 {
   font-size: 1.15rem;
   font-weight: 800;

@@ -36,6 +36,24 @@ type ConfirmRequest struct {
 	PaymentIntentID string `json:"payment_intent_id"`
 }
 
+type RoundTripRequest struct {
+	OutboundFlightID string `json:"outbound_flight_id"`
+	ReturnFlightID   string `json:"return_flight_id"`
+	Seats            int    `json:"seats"`
+	PassengerName    string `json:"passenger_name"`
+	PassengerEmail   string `json:"passenger_email"`
+	PassengerPhone   string `json:"passenger_phone"`
+}
+
+type RoundTripResponse struct {
+	OutboundBookingID string `json:"outbound_booking_id"`
+	ReturnBookingID   string `json:"return_booking_id"`
+	PaymentIntentID   string `json:"payment_intent_id,omitempty"`
+	CheckoutURL       string `json:"checkout_url,omitempty"`
+	TotalAmount       int64  `json:"total_amount"`
+	Status            string `json:"status"`
+}
+
 type EditBookingRequest struct {
 	FlightID       string `json:"flight_id,omitempty"`
 	Seats          int    `json:"seats,omitempty"`

@@ -99,7 +99,12 @@ export function Home() {
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     if (!origin || !dest || !date) return;
-    navigate(`/flights?origin=${origin}&destination=${dest}&date=${date}`);
+    const params = new URLSearchParams({ origin, destination: dest, date });
+    if (tripType === 'round' && returnDate) {
+      params.set('trip', 'round');
+      params.set('return_date', returnDate);
+    }
+    navigate(`/flights?${params.toString()}`);
   }
 
   function swapCities() {

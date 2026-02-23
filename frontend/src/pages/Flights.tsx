@@ -60,6 +60,17 @@ export function Flights() {
   const [bookingFlight, setBookingFlight] = useState<Flight | null>(null);
   const [bookingPriceOverride, setBookingPriceOverride] = useState<number | null>(null);
 
+  // Round-trip state
+  const isRoundTrip = searchParams.get('trip') === 'round';
+  const returnDate = searchParams.get('return_date') || '';
+  const [roundTripStep, setRoundTripStep] = useState<'outbound' | 'return'>('outbound');
+  const [selectedOutbound, setSelectedOutbound] = useState<Flight | null>(null);
+  const [selectedOutboundPrice, setSelectedOutboundPrice] = useState<number | null>(null);
+  // Return flight results
+  const [returnDirectFlights, setReturnDirectFlights] = useState<Flight[]>([]);
+  const [returnConnectingFlights, setReturnConnectingFlights] = useState<ConnectingFlight[]>([]);
+  const [returnLoading, setReturnLoading] = useState(false);
+
   useEffect(() => {
     gqlApi.airportsAndCities().then(d => {
       setAirports(d.airports || []);
@@ -117,7 +128,36 @@ export function Flights() {
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     if (!origin || !dest || !date) return;
-    setSearchParams({ origin, destination: dest, date });
+    setRoundTripStep('outbound');
+    setSelectedOutbound(null);
+    setSelectedOutboundPrice(null);
+    const params: Record<string, string> = { origin, destination: dest, date };
+    if (isRoundTrip && returnDate) {
+      params.trip = 'round';
+      params.return_date = returnDate;
+    }
+    setSearchParams(params);
+  }
+
+  function handleSelectOutbound(flight: Flight, priceOverride?: number) {
+    setSelectedOutbound(flight);
+    setSelectedOutboundPrice(priceOverride ?? null);
+    setRoundTripStep('return');
+    // Search return flights
+    setReturnLoading(true);
+    gqlApi.searchFlights(dest, origin, returnDate).then(res => {
+      setReturnDirectFlights(res.searchFlights.flights || []);
+      setReturnConnectingFlights(res.searchFlights.connecting || []);
+    }).catch(() => {
+      setReturnDirectFlights([]);
+      setReturnConnectingFlights([]);
+    }).finally(() => setReturnLoading(false));
+  }
+
+  function handleSelectReturn(flight: Flight, priceOverride?: number) {
+    // Open booking modal with both flights
+    setBookingFlight(flight);
+    setBookingPriceOverride(priceOverride ?? null);
   }
 
   function shiftDate(days: number) {
@@ -167,6 +207,40 @@ export function Flights() {
     return filtered;
   }, [directFlights, connectingFlights, sortMode, stopFilter]);
 
+  const returnUnifiedList = useMemo<UnifiedItem[]>(() => {
+    const items: UnifiedItem[] = [];
+    for (const f of returnDirectFlights) {
+      items.push({ type: 'direct', flight: f, price: f.price, departureTime: f.departure_time, durationMin: durationMinutes(f.departure_time, f.arrival_time) });
+    }
+    for (const c of returnConnectingFlights) {
+      items.push({ type: 'connecting', connecting: c, price: c.total_price, departureTime: c.leg1.departure_time, durationMin: c.total_duration_hours * 60 });
+    }
+    let filtered = items;
+    if (stopFilter === 'nonstop') filtered = items.filter(i => i.type === 'direct');
+    if (stopFilter === '1stop') filtered = items.filter(i => i.type === 'connecting');
+    filtered.sort((a, b) => {
+      switch (sortMode) {
+        case 'price-asc': return a.price - b.price;
+        case 'price-desc': return b.price - a.price;
+        case 'depart-asc': return new Date(a.departureTime).getTime() - new Date(b.departureTime).getTime();
+        case 'duration-asc': return a.durationMin - b.durationMin;
+        default: return 0;
+      }
+    });
+    return filtered;
+  }, [returnDirectFlights, returnConnectingFlights, sortMode, stopFilter]);
+
+  // Determine which list and handlers to show
+  const showingReturn = isRoundTrip && roundTripStep === 'return';
+  const activeList = showingReturn ? returnUnifiedList : unifiedList;
+  const activeLoading = showingReturn ? returnLoading : loading;
+
+  function getCityName(airportId: string) {
+    const ap = airports.find(a => a.id === airportId);
+    if (!ap) return '';
+    return cities.find(c => c.id === ap.city_id)?.name || ap.code;
+  }
+
   return (
     <div className="flights-page">
       <form className="flights-search-bar" onSubmit={handleSearch}>
@@ -192,6 +266,32 @@ export function Flights() {
         <button type="submit" className="btn btn-primary">Search</button>
       </form>
 
+      {/* Round-trip step indicator */}
+      {isRoundTrip && searched && (
+        <div className="rt-steps">
+          <div className={`rt-step ${roundTripStep === 'outbound' ? 'active' : 'done'}`}>
+            <span className="rt-step-num">{roundTripStep === 'return' ? '✓' : '1'}</span>
+            <div>
+              <div className="rt-step-title">Outbound · {new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+              <div className="rt-step-sub">{getCityName(origin)} → {getCityName(dest)}</div>
+            </div>
+            {selectedOutbound && roundTripStep === 'return' && (
+              <div className="rt-step-selected">
+                {formatTime(selectedOutbound.departure_time)} · {selectedOutbound.flight_number} · ${((selectedOutboundPrice ?? selectedOutbound.price) / 100).toFixed(0)}
+                <button className="rt-change-btn" onClick={() => { setRoundTripStep('outbound'); setSelectedOutbound(null); }}>Change</button>
+              </div>
+            )}
+          </div>
+          <div className={`rt-step ${roundTripStep === 'return' ? 'active' : ''}`}>
+            <span className="rt-step-num">2</span>
+            <div>
+              <div className="rt-step-title">Return · {returnDate ? new Date(returnDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}</div>
+              <div className="rt-step-sub">{getCityName(dest)} → {getCityName(origin)}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {searched && (
         <>
           <div className="sort-filter-bar">
@@ -210,29 +310,37 @@ export function Flights() {
             </select>
           </div>
 
-          {loading ? (
-            <div className="flights-loading"><span className="spinner" /> Searching flights...</div>
-          ) : unifiedList.length === 0 ? (
+          {activeLoading ? (
+            <div className="flights-loading"><span className="spinner" /> {showingReturn ? 'Searching return flights...' : 'Searching flights...'}</div>
+          ) : activeList.length === 0 ? (
             <div className="no-flights">No flights found for this route and date.</div>
           ) : (
             <>
-              <div className="results-count">{unifiedList.length} flight{unifiedList.length !== 1 ? 's' : ''} found</div>
-              {unifiedList.map((item, i) =>
-                item.type === 'direct' && item.flight ? (
+              <div className="results-count">{activeList.length} flight{activeList.length !== 1 ? 's' : ''} found</div>
+              {activeList.map((item, i) => {
+                function handleBook(flight: Flight, priceOvr?: number) {
+                  if (!isLoggedIn) {
+                    const returnUrl = `/flights?origin=${origin}&destination=${dest}&date=${date}&book=${flight.id}${priceOvr ? `&price=${priceOvr}` : ''}${isRoundTrip ? `&trip=round&return_date=${returnDate}` : ''}`;
+                    navigate(`/login?redirect=${encodeURIComponent(returnUrl)}`);
+                    return;
+                  }
+                  if (isRoundTrip && roundTripStep === 'outbound') {
+                    handleSelectOutbound(flight, priceOvr);
+                  } else if (isRoundTrip && roundTripStep === 'return') {
+                    handleSelectReturn(flight, priceOvr);
+                  } else {
+                    setBookingFlight(flight);
+                    setBookingPriceOverride(priceOvr ?? null);
+                  }
+                }
+                return item.type === 'direct' && item.flight ? (
                   <DirectFlightCard
                     key={`d-${item.flight.id}`}
                     flight={item.flight}
                     airports={airports}
                     cities={cities}
-                    onBook={() => {
-                      if (!isLoggedIn) {
-                        const returnUrl = `/flights?origin=${origin}&destination=${dest}&date=${date}&book=${item.flight!.id}`;
-                        navigate(`/login?redirect=${encodeURIComponent(returnUrl)}`);
-                        return;
-                      }
-                      setBookingFlight(item.flight!);
-                      setBookingPriceOverride(null);
-                    }}
+                    onBook={() => handleBook(item.flight!)}
+                    btnLabel={isRoundTrip ? 'Select' : 'Book'}
                   />
                 ) : item.connecting ? (
                   <ConnectingFlightCard
@@ -240,18 +348,11 @@ export function Flights() {
                     cf={item.connecting}
                     airports={airports}
                     cities={cities}
-                    onBook={() => {
-                      if (!isLoggedIn) {
-                        const returnUrl = `/flights?origin=${origin}&destination=${dest}&date=${date}&book=${item.connecting!.leg1.id}&price=${item.connecting!.total_price}`;
-                        navigate(`/login?redirect=${encodeURIComponent(returnUrl)}`);
-                        return;
-                      }
-                      setBookingFlight(item.connecting!.leg1);
-                      setBookingPriceOverride(item.connecting!.total_price);
-                    }}
+                    onBook={() => handleBook(item.connecting!.leg1, item.connecting!.total_price)}
+                    btnLabel={isRoundTrip ? 'Select' : 'Book'}
                   />
-                ) : null
-              )}
+                ) : null;
+              })}
             </>
           )}
         </>
@@ -261,6 +362,9 @@ export function Flights() {
         <BookFlightModal
           flight={bookingFlight}
           displayPrice={bookingPriceOverride ?? bookingFlight.price}
+          outboundFlight={isRoundTrip ? selectedOutbound : null}
+          outboundPrice={selectedOutboundPrice}
+          isRoundTrip={isRoundTrip}
           onClose={() => { setBookingFlight(null); setBookingPriceOverride(null); }}
         />
       )}
@@ -268,11 +372,12 @@ export function Flights() {
   );
 }
 
-function DirectFlightCard({ flight, airports, cities, onBook }: {
+function DirectFlightCard({ flight, airports, cities, onBook, btnLabel = 'Book' }: {
   flight: Flight;
   airports: Airport[];
   cities: City[];
   onBook: () => void;
+  btnLabel?: string;
 }) {
   const dur = durationMinutes(flight.departure_time, flight.arrival_time);
   return (
@@ -299,18 +404,19 @@ function DirectFlightCard({ flight, airports, cities, onBook }: {
         <div className="flight-price-col">
           <span className="flight-price">${(flight.price / 100).toFixed(2)}</span>
           <span className="flight-seats">{flight.seats_available} seats left</span>
-          <button className="btn btn-primary book-btn" onClick={onBook}>Book</button>
+          <button className="btn btn-primary book-btn" onClick={onBook}>{btnLabel}</button>
         </div>
       </div>
     </div>
   );
 }
 
-function ConnectingFlightCard({ cf, airports, cities, onBook }: {
+function ConnectingFlightCard({ cf, airports, cities, onBook, btnLabel = 'Book' }: {
   cf: ConnectingFlight;
   airports: Airport[];
   cities: City[];
   onBook: () => void;
+  btnLabel?: string;
 }) {
   return (
     <div className="flight-card connecting-card">
@@ -336,14 +442,21 @@ function ConnectingFlightCard({ cf, airports, cities, onBook }: {
         </div>
         <div className="flight-price-col">
           <span className="flight-price">${(cf.total_price / 100).toFixed(2)}</span>
-          <button className="btn btn-primary book-btn" onClick={onBook}>Book</button>
+          <button className="btn btn-primary book-btn" onClick={onBook}>{btnLabel}</button>
         </div>
       </div>
     </div>
   );
 }
 
-function BookFlightModal({ flight, displayPrice, onClose }: { flight: Flight; displayPrice: number; onClose: () => void }) {
+function BookFlightModal({ flight, displayPrice, outboundFlight, outboundPrice, isRoundTrip, onClose }: {
+  flight: Flight;
+  displayPrice: number;
+  outboundFlight?: Flight | null;
+  outboundPrice?: number | null;
+  isRoundTrip?: boolean;
+  onClose: () => void;
+}) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [name, setName] = useState('');
@@ -369,7 +482,13 @@ function BookFlightModal({ flight, displayPrice, onClose }: { flight: Flight; di
     e.preventDefault();
     if (!name || !email || !phone || phone.replace(/\D/g, '').length < 7) return;
     const params = new URLSearchParams();
-    params.set('flight_id', flight.id);
+    if (isRoundTrip && outboundFlight) {
+      params.set('flight_id', outboundFlight.id);
+      params.set('return_flight_id', flight.id);
+      params.set('trip', 'round');
+    } else {
+      params.set('flight_id', flight.id);
+    }
     params.set('seats', seats.toString());
     params.set('name', name);
     params.set('email', email);
@@ -380,18 +499,21 @@ function BookFlightModal({ flight, displayPrice, onClose }: { flight: Flight; di
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={e => e.stopPropagation()}>
-        <h2>Book Flight {flight.flight_number}</h2>
+        <h2>{isRoundTrip ? 'Book Round Trip' : `Book Flight ${flight.flight_number}`}</h2>
         <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>
-          ${(displayPrice / 100).toFixed(2)} per seat
+          {isRoundTrip && outboundFlight
+            ? `Outbound: ${outboundFlight.flight_number} · Return: ${flight.flight_number}`
+            : `${(displayPrice / 100).toFixed(2)} per seat`
+          }
         </p>
         {error && <div className="auth-error">{error}</div>}
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>Passenger Name</label>
+            <label>Passenger Name <span style={{ color: 'var(--danger)', fontWeight: 400 }}>*</span></label>
             <input value={name} onChange={e => setName(e.target.value)} required />
           </div>
           <div className="form-group">
-            <label>Email</label>
+            <label>Email <span style={{ color: 'var(--danger)', fontWeight: 400 }}>*</span></label>
             <input type="email" value={email} onChange={e => setEmail(e.target.value)} required />
           </div>
           <div className="form-group">
@@ -402,7 +524,7 @@ function BookFlightModal({ flight, displayPrice, onClose }: { flight: Flight; di
             )}
           </div>
           <div className="form-group">
-            <label>Seats</label>
+            <label>Seats <span style={{ color: 'var(--danger)', fontWeight: 400 }}>*</span></label>
             <input type="number" min={1} max={flight.seats_available} value={seats} onChange={e => setSeats(Number(e.target.value))} />
           </div>
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
