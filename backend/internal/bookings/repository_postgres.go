@@ -50,6 +50,14 @@ func (s *PostgresStore) UpdatePaymentIntent(ctx context.Context, id, paymentInte
 	return err
 }
 
+func (s *PostgresStore) UpdateBooking(ctx context.Context, b *Booking) error {
+	_, err := s.pool.Exec(ctx,
+		`UPDATE bookings SET flight_id = $2::uuid, seats = $3, passenger_name = $4, passenger_email = $5, passenger_phone = $6, amount = $7 WHERE id::text = $1`,
+		b.ID, b.FlightID, b.Seats, b.PassengerName, b.PassengerEmail, nullIfEmpty(b.PassengerPhone), b.Amount,
+	)
+	return err
+}
+
 func (s *PostgresStore) ListByUser(ctx context.Context, userID string) ([]*Booking, error) {
 	rows, err := s.pool.Query(ctx,
 		`SELECT `+selectBookingCols+` FROM bookings WHERE user_id::text = $1 ORDER BY created_at DESC`, userID)

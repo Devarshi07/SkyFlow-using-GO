@@ -188,6 +188,18 @@ export const authApi = {
 
   me: () => request<User>('/auth/me'),
 
+  forgotPassword: (email: string) =>
+    request<{ message: string }>('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+
+  resetPassword: (token: string, newPassword: string) =>
+    request<{ message: string }>('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, new_password: newPassword }),
+    }),
+
   logout: () => {
     const rt = localStorage.getItem('refresh_token');
     clearTokens();
@@ -240,6 +252,11 @@ export const bookingsApi = {
   cancel: (bookingId: string) =>
     request<Booking>(`/bookings/${bookingId}/cancel`, {
       method: 'POST',
+    }),
+  edit: (bookingId: string, data: { flight_id?: string; seats?: number; passenger_name?: string; passenger_email?: string; passenger_phone?: string }) =>
+    request<Booking>(`/bookings/${bookingId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
     }),
   get: (id: string) => request<Booking>(`/bookings/${id}`),
   my: () => request<{ bookings: Booking[] }>('/bookings/my').then(r => r.bookings),

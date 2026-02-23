@@ -244,6 +244,76 @@ func (s *Service) CancelBooking(ctx context.Context, bookingID string) (*Booking
 	return b, nil
 }
 
+func (s *Service) EditBooking(ctx context.Context, userID, bookingID string, req EditBookingRequest) (*Booking, *apperrors.AppError) {
+	b, err := s.store.GetByID(ctx, bookingID)
+	if err != nil {
+		return nil, apperrors.NotFound("booking")
+	}
+	if b.UserID != userID {
+		return nil, apperrors.Unauthorized("not your booking")
+	}
+	if b.Status == "cancelled" {
+		return nil, apperrors.BadRequest("cannot edit a cancelled booking")
+	}
+
+	// If flight is changing, handle seat swap
+	if req.FlightID != "" && req.FlightID != b.FlightID {
+		newFlight, appErr := s.flightSvc.GetByID(ctx, req.FlightID)
+		if appErr != nil {
+			return nil, appErr
+		}
+		seats := req.Seats
+		if seats <= 0 {
+			seats = b.Seats
+		}
+		if newFlight.SeatsAvailable < seats {
+			return nil, apperrors.BadRequest("not enough seats on the new flight")
+		}
+
+		// Restore seats on old flight
+		s.restoreSeats(ctx, b.FlightID, b.Seats)
+
+		// Reserve seats on new flight
+		newAvail := newFlight.SeatsAvailable - seats
+		s.flightSvc.Update(ctx, req.FlightID, flights.UpdateFlightRequest{SeatsAvailable: &newAvail})
+
+		b.FlightID = req.FlightID
+		b.Seats = seats
+		b.Amount = newFlight.Price * int64(seats)
+	} else if req.Seats > 0 && req.Seats != b.Seats {
+		// Just changing seat count on same flight
+		f, appErr := s.flightSvc.GetByID(ctx, b.FlightID)
+		if appErr != nil {
+			return nil, appErr
+		}
+		diff := req.Seats - b.Seats
+		if diff > 0 && f.SeatsAvailable < diff {
+			return nil, apperrors.BadRequest("not enough seats available")
+		}
+		newAvail := f.SeatsAvailable - diff
+		s.flightSvc.Update(ctx, b.FlightID, flights.UpdateFlightRequest{SeatsAvailable: &newAvail})
+		b.Seats = req.Seats
+		b.Amount = f.Price * int64(req.Seats)
+	}
+
+	// Update passenger details
+	if req.PassengerName != "" {
+		b.PassengerName = req.PassengerName
+	}
+	if req.PassengerEmail != "" {
+		b.PassengerEmail = req.PassengerEmail
+	}
+	if req.PassengerPhone != "" {
+		b.PassengerPhone = req.PassengerPhone
+	}
+
+	if err := s.store.UpdateBooking(ctx, b); err != nil {
+		return nil, apperrors.Internal(err)
+	}
+
+	return b, nil
+}
+
 func (s *Service) GetByID(ctx context.Context, id string) (*Booking, *apperrors.AppError) {
 	b, err := s.store.GetByID(ctx, id)
 	if err != nil {

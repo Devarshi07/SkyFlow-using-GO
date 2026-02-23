@@ -111,6 +111,9 @@ export function Login() {
         </button>
 
         <p className="auth-footer">
+          <Link to="/forgot-password">Forgot your password?</Link>
+        </p>
+        <p className="auth-footer">
           Don't have an account? <Link to="/register">Create one</Link>
         </p>
       </div>

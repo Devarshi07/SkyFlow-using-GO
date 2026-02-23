@@ -86,6 +86,27 @@ We wish you a pleasant journey.
 	return s.send(e.To, subject, body)
 }
 
+func (s *Sender) SendPasswordReset(to, resetLink string) error {
+	subject := "SkyFlow — Reset Your Password"
+
+	body := fmt.Sprintf(`Hi there,
+
+We received a request to reset your password for your SkyFlow account.
+
+Click the link below to set a new password:
+
+%s
+
+This link will expire in 30 minutes.
+
+If you didn't request this, you can safely ignore this email.
+
+— The SkyFlow Team
+`, resetLink)
+
+	return s.send(to, subject, body)
+}
+
 func (s *Sender) send(to, subject, body string) error {
 	// Always log the email
 	s.log.Info("sending email",

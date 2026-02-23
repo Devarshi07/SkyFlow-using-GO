@@ -35,3 +35,11 @@ type CreateBookingResponse struct {
 type ConfirmRequest struct {
 	PaymentIntentID string `json:"payment_intent_id"`
 }
+
+type EditBookingRequest struct {
+	FlightID       string `json:"flight_id,omitempty"`
+	Seats          int    `json:"seats,omitempty"`
+	PassengerName  string `json:"passenger_name,omitempty"`
+	PassengerEmail string `json:"passenger_email,omitempty"`
+	PassengerPhone string `json:"passenger_phone,omitempty"`
+}

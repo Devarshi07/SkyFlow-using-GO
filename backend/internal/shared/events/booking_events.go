@@ -3,7 +3,14 @@ package events
 // Queue names
 const (
 	QueueBookingConfirmed = "booking.confirmed"
+	QueuePasswordReset    = "password.reset"
 )
+
+// PasswordResetEvent is published when a user requests a password reset
+type PasswordResetEvent struct {
+	Email     string `json:"email"`
+	ResetLink string `json:"reset_link"`
+}
 
 // BookingConfirmedEvent is published to RabbitMQ when a booking is confirmed
 type BookingConfirmedEvent struct {

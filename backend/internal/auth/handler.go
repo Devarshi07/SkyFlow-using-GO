@@ -27,6 +27,8 @@ func (h *Handler) Routes(r chi.Router) {
 	r.Post("/refresh", h.Refresh)
 	r.Post("/logout", h.Logout)
 	r.Post("/google", h.GoogleAuth)
+	r.Post("/forgot-password", h.ForgotPassword)
+	r.Post("/reset-password", h.ResetPassword)
 	r.Get("/me", h.Me)
 	r.Put("/profile", h.UpdateProfile)
 }
@@ -130,6 +132,33 @@ func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response.WriteOK(w, r, u)
+}
+
+func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
+	var req ForgotPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		response.WriteError(w, r, apperrors.BadRequest("invalid JSON"), h.log)
+		return
+	}
+	if appErr := h.svc.ForgotPassword(r.Context(), req.Email); appErr != nil {
+		response.WriteError(w, r, appErr.WithRequestID(middleware.GetRequestID(r.Context())), h.log)
+		return
+	}
+	// Always return success to not reveal if email exists
+	response.WriteOK(w, r, map[string]string{"message": "If an account with that email exists, a reset link has been sent."})
+}
+
+func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	var req ResetPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		response.WriteError(w, r, apperrors.BadRequest("invalid JSON"), h.log)
+		return
+	}
+	if appErr := h.svc.ResetPassword(r.Context(), req.Token, req.NewPassword); appErr != nil {
+		response.WriteError(w, r, appErr.WithRequestID(middleware.GetRequestID(r.Context())), h.log)
+		return
+	}
+	response.WriteOK(w, r, map[string]string{"message": "Password has been reset successfully."})
 }
 
 func (h *Handler) extractUserID(r *http.Request) string {

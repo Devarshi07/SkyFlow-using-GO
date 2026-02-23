@@ -123,4 +123,9 @@
 .booking-actions .btn {
   flex: 1;
   text-align: center;
+  color: #fff;
+}
+
+.booking-actions .btn:hover {
+  color: #fff;
 }

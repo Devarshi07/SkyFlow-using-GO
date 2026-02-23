@@ -27,6 +27,7 @@ func (h *Handler) Routes(r chi.Router) {
 	r.Post("/confirm", h.Confirm)
 	r.Get("/my", h.ListMy)
 	r.Get("/{id}", h.GetByID)
+	r.Put("/{id}", h.Edit)
 	r.Post("/{id}/cancel", h.Cancel)
 	r.Post("/{id}/confirm-payment", h.ConfirmByBookingID)
 }
@@ -102,6 +103,26 @@ func (h *Handler) ConfirmByBookingID(w http.ResponseWriter, r *http.Request) {
 	b, confirmErr := h.svc.Confirm(r.Context(), booking.PaymentIntentID)
 	if confirmErr != nil {
 		response.WriteError(w, r, confirmErr.WithRequestID(middleware.GetRequestID(r.Context())), h.log)
+		return
+	}
+	response.WriteOK(w, r, b)
+}
+
+func (h *Handler) Edit(w http.ResponseWriter, r *http.Request) {
+	userID := extractUserID(r)
+	if userID == "" {
+		response.WriteError(w, r, apperrors.Unauthorized(""), h.log)
+		return
+	}
+	id := chi.URLParam(r, "id")
+	var req EditBookingRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		response.WriteError(w, r, apperrors.BadRequest("invalid JSON"), h.log)
+		return
+	}
+	b, appErr := h.svc.EditBooking(r.Context(), userID, id, req)
+	if appErr != nil {
+		response.WriteError(w, r, appErr.WithRequestID(middleware.GetRequestID(r.Context())), h.log)
 		return
 	}
 	response.WriteOK(w, r, b)
