@@ -17,6 +17,12 @@ export function BookingDetail() {
   const paymentStatus = searchParams.get('payment');
   const sessionId = searchParams.get('session_id') || '';
 
+  // Edit-payment flow (Stripe redirect back)
+  const editPaid = searchParams.get('edit_paid') === 'true';
+  const editSessionId = searchParams.get('session_id') || '';
+  const editNewFlightId = searchParams.get('new_flight_id') || '';
+  const editNewSeats = parseInt(searchParams.get('new_seats') || '0', 10);
+
   const [booking, setBooking] = useState<Booking | null>(null);
   const [flight, setFlight] = useState<Flight | null>(null);
   const [cities, setCities] = useState<City[]>([]);
@@ -48,7 +54,10 @@ export function BookingDetail() {
       } catch { /* ignore */ }
 
       // Determine if this is a post-payment flow
-      if (justPaid && b.status === 'pending') {
+      if (editPaid) {
+        // Edit payment completed via Stripe — confirm the edit
+        setPostPaymentPhase('pending');
+      } else if (justPaid && b.status === 'pending') {
         setPostPaymentPhase('pending');
       } else if (paymentStatus === 'success' && b.status === 'pending') {
         setPostPaymentPhase('pending');
@@ -68,7 +77,20 @@ export function BookingDetail() {
     const timer = setTimeout(async () => {
       try {
         let confirmed: Booking;
-        if (paymentIntentId) {
+        if (editPaid && id) {
+          // Confirm the edit with Stripe session
+          confirmed = await bookingsApi.confirmEdit(id, {
+            payment_intent_id: '',
+            session_id: editSessionId,
+            new_flight_id: editNewFlightId,
+            new_seats: editNewSeats,
+          });
+          // Refresh flight data since it may have changed
+          try {
+            const f = await flightsApi.get(confirmed.flight_id);
+            setFlight(f);
+          } catch { /* ignore */ }
+        } else if (paymentIntentId) {
           confirmed = await bookingsApi.confirm(paymentIntentId);
         } else if (sessionId && id) {
           confirmed = await bookingsApi.confirmByBookingId(id, sessionId);
@@ -427,11 +449,16 @@ function EditBookingModal({ booking, flight: currentFlight, onClose, onSaved }: 
       }
       const res = await bookingsApi.edit(booking.id, payload as any);
 
-      if (res.needs_payment && res.payment_intent_id) {
-        // Redirect to checkout for the price difference
+      if (res.needs_payment) {
+        if (res.checkout_url) {
+          // Stripe Checkout — redirect to Stripe's hosted page
+          window.location.href = res.checkout_url;
+          return;
+        }
+        // Demo mode — use built-in checkout page
         const params = new URLSearchParams();
         params.set('booking_id', booking.id);
-        params.set('payment_intent_id', res.payment_intent_id);
+        params.set('payment_intent_id', res.payment_intent_id || '');
         params.set('amount', (res.amount_due || 0).toString());
         params.set('flight_id', selectedFlightId || booking.flight_id);
         params.set('name', name);

@@ -138,6 +138,7 @@ func (h *Handler) ConfirmEdit(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	var req struct {
 		PaymentIntentID string `json:"payment_intent_id"`
+		SessionID       string `json:"session_id"`
 		NewFlightID     string `json:"new_flight_id"`
 		NewSeats        int    `json:"new_seats"`
 	}
@@ -145,7 +146,7 @@ func (h *Handler) ConfirmEdit(w http.ResponseWriter, r *http.Request) {
 		response.WriteError(w, r, apperrors.BadRequest("invalid JSON"), h.log)
 		return
 	}
-	b, appErr := h.svc.ConfirmEdit(r.Context(), userID, id, req.PaymentIntentID, req.NewFlightID, req.NewSeats)
+	b, appErr := h.svc.ConfirmEdit(r.Context(), userID, id, req.PaymentIntentID, req.SessionID, req.NewFlightID, req.NewSeats)
 	if appErr != nil {
 		response.WriteError(w, r, appErr.WithRequestID(middleware.GetRequestID(r.Context())), h.log)
 		return

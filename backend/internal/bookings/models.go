@@ -48,6 +48,7 @@ type EditBookingResponse struct {
 	Booking         *Booking `json:"booking"`
 	NeedsPayment    bool     `json:"needs_payment"`
 	PaymentIntentID string   `json:"payment_intent_id,omitempty"`
+	CheckoutURL     string   `json:"checkout_url,omitempty"`
 	AmountDue       int64    `json:"amount_due,omitempty"`
 	OldAmount       int64    `json:"old_amount,omitempty"`
 	NewAmount       int64    `json:"new_amount,omitempty"`

@@ -161,6 +161,7 @@ export interface EditBookingResponse {
   booking: Booking;
   needs_payment: boolean;
   payment_intent_id?: string;
+  checkout_url?: string;
   amount_due?: number;
   old_amount?: number;
   new_amount?: number;
@@ -267,7 +268,7 @@ export const bookingsApi = {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
-  confirmEdit: (bookingId: string, data: { payment_intent_id: string; new_flight_id: string; new_seats: number }) =>
+  confirmEdit: (bookingId: string, data: { payment_intent_id: string; session_id?: string; new_flight_id: string; new_seats: number }) =>
     request<Booking>(`/bookings/${bookingId}/confirm-edit`, {
       method: 'POST',
       body: JSON.stringify(data),

@@ -2,6 +2,7 @@ package bookings
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	apperrors "github.com/skyflow/skyflow/internal/shared/errors"
@@ -289,23 +290,14 @@ func (s *Service) EditBooking(ctx context.Context, userID, bookingID string, req
 			}
 			_ = s.store.UpdateBooking(ctx, b)
 
-			// Create a payment intent for the difference
-			intentResp, payErr := s.paymentSvc.CreateIntent(payments.CreateIntentRequest{
-				Amount:   amountDue,
-				Currency: "usd",
-			})
+			resp, payErr := s.createEditPayment(amountDue, b.ID, req.FlightID, seats)
 			if payErr != nil {
 				return nil, payErr
 			}
-
-			return &EditBookingResponse{
-				Booking:         b,
-				NeedsPayment:    true,
-				PaymentIntentID: intentResp.PaymentIntentID,
-				AmountDue:       amountDue,
-				OldAmount:       oldAmount,
-				NewAmount:       newAmount,
-			}, nil
+			resp.Booking = b
+			resp.OldAmount = oldAmount
+			resp.NewAmount = newAmount
+			return resp, nil
 		}
 
 		// Same price or cheaper — just swap flights directly
@@ -343,22 +335,14 @@ func (s *Service) EditBooking(ctx context.Context, userID, bookingID string, req
 			}
 			_ = s.store.UpdateBooking(ctx, b)
 
-			intentResp, payErr := s.paymentSvc.CreateIntent(payments.CreateIntentRequest{
-				Amount:   amountDue,
-				Currency: "usd",
-			})
+			resp, payErr := s.createEditPayment(amountDue, b.ID, b.FlightID, req.Seats)
 			if payErr != nil {
 				return nil, payErr
 			}
-
-			return &EditBookingResponse{
-				Booking:         b,
-				NeedsPayment:    true,
-				PaymentIntentID: intentResp.PaymentIntentID,
-				AmountDue:       amountDue,
-				OldAmount:       oldAmount,
-				NewAmount:       newAmount,
-			}, nil
+			resp.Booking = b
+			resp.OldAmount = oldAmount
+			resp.NewAmount = newAmount
+			return resp, nil
 		}
 
 		newAvail := f.SeatsAvailable - diff
@@ -391,8 +375,51 @@ func (s *Service) EditBooking(ctx context.Context, userID, bookingID string, req
 	}, nil
 }
 
+// createEditPayment creates a Stripe Checkout session or mock intent for edit payment
+func (s *Service) createEditPayment(amountDue int64, bookingID, newFlightID string, newSeats int) (*EditBookingResponse, *apperrors.AppError) {
+	frontendOrigin := os.Getenv("FRONTEND_URL")
+	if frontendOrigin == "" {
+		frontendOrigin = "http://localhost:5173"
+	}
+
+	if s.paymentSvc.IsLive() {
+		successURL := fmt.Sprintf("%s/bookings/%s?edit_paid=true&session_id={CHECKOUT_SESSION_ID}&new_flight_id=%s&new_seats=%d",
+			frontendOrigin, bookingID, newFlightID, newSeats)
+		cancelURL := fmt.Sprintf("%s/bookings/%s?edit_cancelled=true", frontendOrigin, bookingID)
+
+		sessResp, payErr := s.paymentSvc.CreateCheckoutSession(
+			amountDue, "usd", bookingID, "Booking upgrade", successURL, cancelURL,
+		)
+		if payErr != nil {
+			return nil, payErr
+		}
+
+		return &EditBookingResponse{
+			NeedsPayment:    true,
+			PaymentIntentID: sessResp.PaymentIntentID,
+			CheckoutURL:     sessResp.CheckoutURL,
+			AmountDue:       amountDue,
+		}, nil
+	}
+
+	// Demo mode
+	intentResp, payErr := s.paymentSvc.CreateIntent(payments.CreateIntentRequest{
+		Amount:   amountDue,
+		Currency: "usd",
+	})
+	if payErr != nil {
+		return nil, payErr
+	}
+
+	return &EditBookingResponse{
+		NeedsPayment:    true,
+		PaymentIntentID: intentResp.PaymentIntentID,
+		AmountDue:       amountDue,
+	}, nil
+}
+
 // ConfirmEdit finalizes a booking edit after additional payment
-func (s *Service) ConfirmEdit(ctx context.Context, userID, bookingID string, paymentIntentID string, newFlightID string, newSeats int) (*Booking, *apperrors.AppError) {
+func (s *Service) ConfirmEdit(ctx context.Context, userID, bookingID string, paymentIntentID string, sessionID string, newFlightID string, newSeats int) (*Booking, *apperrors.AppError) {
 	b, err := s.store.GetByID(ctx, bookingID)
 	if err != nil {
 		return nil, apperrors.NotFound("booking")
@@ -402,7 +429,16 @@ func (s *Service) ConfirmEdit(ctx context.Context, userID, bookingID string, pay
 	}
 
 	// Confirm the payment
-	if s.paymentSvc.IsLive() {
+	if sessionID != "" && s.paymentSvc.IsLive() {
+		// Stripe Checkout session flow
+		sessStatus, payErr := s.paymentSvc.GetCheckoutSession(sessionID)
+		if payErr != nil {
+			return nil, payErr
+		}
+		if sessStatus.PaymentStatus != "paid" {
+			return nil, apperrors.BadRequest("payment not yet completed (status: " + sessStatus.PaymentStatus + ")")
+		}
+	} else if s.paymentSvc.IsLive() {
 		pd, payErr := s.paymentSvc.Get(paymentIntentID)
 		if payErr != nil {
 			return nil, payErr
