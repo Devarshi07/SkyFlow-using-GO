@@ -1,0 +1,54 @@
+.profile-page {
+  display: flex;
+  justify-content: center;
+}
+
+.profile-card {
+  background: #112240;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  padding: 2.5rem;
+  width: 100%;
+  max-width: 520px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.profile-card h1 {
+  font-size: 1.5rem;
+  margin-bottom: 0.25rem;
+  color: #fff;
+}
+
+.profile-email {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-bottom: 1.5rem;
+}
+
+.profile-saved {
+  background: rgba(52, 211, 153, 0.1);
+  border: 1px solid rgba(52, 211, 153, 0.2);
+  border-radius: var(--radius-sm);
+  padding: 0.65rem 1rem;
+  color: var(--success);
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.form-row-profile {
+  display: flex;
+  gap: 1rem;
+}
+
+.form-row-profile .form-group {
+  flex: 1;
+}
+
+.profile-card textarea {
+  width: 100%;
+  resize: vertical;
+}
+
+.profile-card select {
+  width: 100%;
+}

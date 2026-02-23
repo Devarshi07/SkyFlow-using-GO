@@ -1,0 +1,126 @@
+.booking-detail-page {
+  display: flex;
+  justify-content: center;
+}
+
+.booking-detail-card {
+  background: #112240;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  padding: 2.5rem;
+  max-width: 600px;
+  width: 100%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.payment-success-banner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: rgba(52, 211, 153, 0.1);
+  border: 1px solid rgba(52, 211, 153, 0.25);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.payment-success-banner .success-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(52, 211, 153, 0.2);
+  color: var(--success);
+  font-size: 1.3rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.payment-success-banner strong {
+  color: var(--success);
+  font-size: 1rem;
+}
+
+.payment-success-banner p {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-top: 0.15rem;
+}
+
+.booking-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.booking-header h1 {
+  font-size: 1.4rem;
+  color: #fff;
+}
+
+.status-badge {
+  padding: 0.35rem 0.9rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.status-confirmed {
+  background: rgba(52, 211, 153, 0.12);
+  color: var(--success);
+}
+
+.status-pending {
+  background: rgba(251, 191, 36, 0.12);
+  color: var(--warning);
+}
+
+.status-other {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+}
+
+.booking-section {
+  margin-bottom: 1.5rem;
+}
+
+.booking-section h3 {
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.8rem;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  font-size: 0.9rem;
+}
+
+.detail-row span:first-child {
+  color: var(--text-muted);
+}
+
+.mono {
+  font-family: monospace;
+  font-size: 0.8rem;
+}
+
+.booking-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 2rem;
+}
+
+.booking-actions .btn {
+  flex: 1;
+  text-align: center;
+}

@@ -1,0 +1,91 @@
+.my-bookings-page {
+  padding: 2rem 1.5rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.my-bookings-page h1 {
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
+  color: #fff;
+}
+
+.no-bookings {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--text-muted);
+  background: #112240;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+}
+
+.no-bookings p {
+  margin: 0 0 1.5rem 0;
+  font-size: 1.05rem;
+}
+
+.no-bookings .btn {
+  margin: 0;
+  color: #fff;
+}
+
+.no-bookings .btn:hover {
+  color: #fff;
+}
+
+.bookings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.booking-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.1rem 1.5rem;
+  background: #112240;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  text-decoration: none;
+  color: var(--text);
+  transition: all 0.2s;
+}
+
+.booking-item:hover {
+  border-color: rgba(79, 140, 255, 0.3);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  color: var(--text);
+  transform: translateY(-1px);
+}
+
+.booking-item-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.booking-item-name {
+  font-weight: 700;
+  color: #fff;
+}
+
+.booking-item-date {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.booking-item-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.booking-item-seats {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
