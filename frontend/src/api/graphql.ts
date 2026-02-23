@@ -5,8 +5,10 @@ interface GqlResponse<T> {
   errors?: { message: string }[];
 }
 
+const GQL_BASE = import.meta.env.VITE_API_URL || '';
+
 async function gqlRequest<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
-  const res = await fetch('/graphql', {
+  const res = await fetch(`${GQL_BASE}/graphql`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ query, variables }),
