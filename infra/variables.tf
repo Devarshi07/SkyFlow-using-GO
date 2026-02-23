@@ -1,7 +1,13 @@
+variable "location" {
+  description = "Azure region (allowed: austriaeast, koreacentral, southeastasia, uaenorth, eastasia)"
+  type        = string
+  default     = "Southeast Asia"
+}
+
 variable "github_username" {
   description = "GitHub username for container registry"
   type        = string
-  default     = "somyapadhy4501"
+  default     = "SomyaPadhy4501"
 }
 
 variable "database_url" {

@@ -4,6 +4,10 @@ terraform {
       source  = "hashicorp/azurerm"
       version = "~> 3.0"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.0"
+    }
   }
   required_version = ">= 1.0"
 }
@@ -15,7 +19,7 @@ provider "azurerm" {
 # ── Resource Group ──
 resource "azurerm_resource_group" "skyflow" {
   name     = "skyflow-rg"
-  location = "East US"
+  location = var.location
 }
 
 # ── Log Analytics (required by Container Apps) ──
