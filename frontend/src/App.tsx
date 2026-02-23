@@ -9,6 +9,7 @@ import { ResetPassword } from './pages/ResetPassword';
 import { Flights } from './pages/Flights';
 import { Profile } from './pages/Profile';
 import { Checkout } from './pages/Checkout';
+import { BookingConfirmation } from './pages/BookingConfirmation';
 import { BookingDetail } from './pages/BookingDetail';
 import { MyBookings } from './pages/MyBookings';
 import './App.css';
@@ -27,6 +28,7 @@ export default function App() {
             <Route path="/flights" element={<Flights />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/checkout" element={<Checkout />} />
+            <Route path="/booking-confirmed" element={<BookingConfirmation />} />
             <Route path="/bookings/:id" element={<BookingDetail />} />
             <Route path="/bookings" element={<MyBookings />} />
           </Route>

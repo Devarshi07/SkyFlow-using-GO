@@ -30,8 +30,9 @@ export function BookingDetail() {
       if (paymentStatus === 'success' && b.status === 'pending') {
         setConfirming(true);
         try {
-          const confirmed = await bookingsApi.confirmByBookingId(id, sessionId);
-          setBooking(confirmed);
+          await bookingsApi.confirmByBookingId(id, sessionId);
+          navigate(`/booking-confirmed?booking_id=${id}`, { replace: true });
+          return;
         } catch {
           // Payment may still be processing
         } finally {

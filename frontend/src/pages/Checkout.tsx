@@ -55,8 +55,7 @@ export function Checkout() {
     setError('');
     setProcessing(true);
     try {
-      const booking = await bookingsApi.confirm(paymentIntentId);
-      navigate(`/bookings/${booking.id}`, { replace: true });
+      navigate(`/booking-confirmed?booking_id=${bookingId}&payment_intent_id=${paymentIntentId}`, { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Payment failed. Please try again.');
       setProcessing(false);

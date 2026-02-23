@@ -1,0 +1,422 @@
+.confirmation-page {
+  display: flex;
+  justify-content: center;
+  padding: 1rem 1rem 3rem;
+}
+
+.confirmation-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 4rem;
+  color: var(--text-muted);
+}
+
+.confirmation-card {
+  max-width: 560px;
+  width: 100%;
+  animation: confirmSlideUp 0.5s ease-out;
+}
+
+@keyframes confirmSlideUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Hero ─────────────────────────────── */
+
+.confirmation-hero {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.confirmation-checkmark {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 1rem;
+}
+
+.checkmark-svg {
+  width: 72px;
+  height: 72px;
+}
+
+.checkmark-circle {
+  stroke: var(--success, #34d399);
+  stroke-width: 2;
+  stroke-dasharray: 166;
+  stroke-dashoffset: 166;
+  animation: checkStroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+
+.checkmark-check {
+  stroke: var(--success, #34d399);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: checkStroke 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.5s forwards;
+}
+
+@keyframes checkStroke {
+  to { stroke-dashoffset: 0; }
+}
+
+.confirmation-hero h1 {
+  font-size: 1.6rem;
+  color: #fff;
+  margin-bottom: 0.35rem;
+}
+
+.confirmation-subtitle {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+/* ── Pending spinner ──────────────────── */
+
+.confirmation-pending-icon {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pending-spinner {
+  width: 56px;
+  height: 56px;
+  border: 3px solid rgba(251, 191, 36, 0.15);
+  border-top-color: var(--warning, #fbbf24);
+  border-radius: 50%;
+  animation: pendingSpin 1s linear infinite;
+}
+
+@keyframes pendingSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Status badge bar ─────────────────── */
+
+.confirmation-status-bar {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.confirmation-badge {
+  display: inline-block;
+  padding: 0.4rem 1.2rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  transition: all 0.4s ease;
+}
+
+.badge-pending {
+  background: rgba(251, 191, 36, 0.12);
+  color: var(--warning, #fbbf24);
+}
+
+.badge-confirmed {
+  background: rgba(52, 211, 153, 0.12);
+  color: var(--success, #34d399);
+  animation: badgePop 0.4s ease-out;
+}
+
+@keyframes badgePop {
+  0% { transform: scale(0.8); opacity: 0; }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ── Ticket ───────────────────────────── */
+
+.ticket {
+  background: #112240;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  transition: border-color 0.5s ease, box-shadow 0.5s ease;
+}
+
+.ticket-pending {
+  border-color: rgba(251, 191, 36, 0.15);
+}
+
+.ticket-confirmed {
+  border-color: rgba(52, 211, 153, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(52, 211, 153, 0.1);
+}
+
+.ticket-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ticket-airline {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--accent, #60a5fa);
+}
+
+.ticket-flight {
+  font-family: monospace;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+}
+
+.ticket-route {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.75rem 1.5rem;
+  gap: 1rem;
+}
+
+.ticket-endpoint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.ticket-time {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.ticket-city {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.ticket-date {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+.ticket-arrow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--accent, #60a5fa);
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.ticket-line {
+  width: 30px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.ticket-tear {
+  position: relative;
+  height: 1px;
+  margin: 0 1rem;
+  border-top: 2px dashed rgba(255, 255, 255, 0.1);
+}
+
+.ticket-details {
+  padding: 1.25rem 1.5rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.ticket-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.ticket-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.ticket-value {
+  font-size: 0.9rem;
+  color: #fff;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Sections ─────────────────────────── */
+
+.confirmation-section {
+  background: #112240;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.confirmation-section h3 {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.75rem;
+}
+
+.confirmation-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.4rem 0;
+  font-size: 0.85rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.confirmation-row:last-child {
+  border-bottom: none;
+}
+
+.confirmation-row span:first-child {
+  color: var(--text-muted);
+}
+
+.confirmation-row.total {
+  padding: 0.65rem 0;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.confirmation-amount {
+  color: var(--success, #34d399);
+  font-size: 1.15rem;
+}
+
+.confirmation-paid {
+  color: var(--success, #34d399);
+  font-weight: 600;
+}
+
+.confirmation-pending-text {
+  color: var(--warning, #fbbf24);
+  font-weight: 600;
+}
+
+.confirmation-mono {
+  font-family: monospace;
+  font-size: 0.75rem;
+  word-break: break-all;
+}
+
+/* ── Email notice ─────────────────────── */
+
+.confirmation-email-notice {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(96, 165, 250, 0.08);
+  border: 1px solid rgba(96, 165, 250, 0.18);
+  border-radius: 10px;
+  padding: 0.9rem 1.25rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  animation: fadeIn 0.4s ease-out;
+}
+
+.confirmation-email-notice span {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.confirmation-email-notice strong {
+  color: #fff;
+}
+
+/* ── Footer / countdown ───────────────── */
+
+.confirmation-footer {
+  text-align: center;
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.confirmation-countdown {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+}
+
+.confirmation-countdown strong {
+  color: var(--accent, #60a5fa);
+}
+
+.confirmation-progress {
+  width: 100%;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 1.25rem;
+}
+
+.confirmation-progress-bar {
+  height: 100%;
+  background: var(--accent, #60a5fa);
+  border-radius: 3px;
+  transition: width 1s linear;
+}
+
+.confirmation-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.confirmation-actions .btn {
+  flex: 1;
+}
+
+/* ── Responsive ───────────────────────── */
+
+@media (max-width: 500px) {
+  .ticket-route {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .ticket-arrow {
+    transform: rotate(90deg);
+  }
+
+  .ticket-details {
+    grid-template-columns: 1fr;
+  }
+
+  .confirmation-actions {
+    flex-direction: column;
+  }
+}
