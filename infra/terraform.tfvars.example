@@ -1,0 +1,13 @@
+# Copy this to terraform.tfvars and fill in your values
+# NEVER commit terraform.tfvars to git!
+
+github_username    = "somyapadhy4501"
+database_url       = "postgresql://neondb_owner:PASSWORD@ep-xxx.us-east-1.aws.neon.tech/neondb?sslmode=require"
+redis_url          = "rediss://default:PASSWORD@intimate-toad-46719.upstash.io:6379"
+rabbitmq_url       = "amqps://user:pass@leopard.lmq.cloudamqp.com/user"
+frontend_url       = "https://sky-flow-using-go-nsn8.vercel.app"
+stripe_secret_key  = "sk_test_..."
+google_client_id   = "1013267431983-....apps.googleusercontent.com"
+google_client_secret = "GOCSPX-..."
+smtp_from          = "aryanpadhy40501@gmail.com"
+smtp_password      = "your-16-char-app-password"
