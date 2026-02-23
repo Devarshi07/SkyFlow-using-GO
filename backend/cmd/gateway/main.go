@@ -128,6 +128,7 @@ func main() {
 	authSvc := auth.NewService(authStore)
 	if eventPublisher != nil {
 		authSvc.SetResetPublisher(eventPublisher)
+		authSvc.SetWelcomePublisher(eventPublisher)
 	}
 	flightSvc := flights.NewService(flightStore, searchLogColl)
 	citySvc := cities.NewService(cityStore)

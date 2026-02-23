@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { gqlApi } from '../api/graphql';
 import { bookingsApi, flightsApi, profileApi, type Flight, type ConnectingFlight, type Airport, type City, ApiError } from '../api/client';
+import { SkyFlowLogo } from '../components/SkyFlowLogo';
 import { useAuth } from '../context/AuthContext';
 import './Flights.css';
 
@@ -278,7 +279,7 @@ function DirectFlightCard({ flight, airports, cities, onBook }: {
     <div className="flight-card">
       <div className="flight-card-main">
         <div className="flight-info-col">
-          <span className="flight-number">{flight.flight_number}</span>
+          <SkyFlowLogo size="sm" flightNumbers={flight.flight_number} />
           <span className="stop-badge nonstop">Non Stop</span>
         </div>
         <div className="flight-route-col">
@@ -315,9 +316,8 @@ function ConnectingFlightCard({ cf, airports, cities, onBook }: {
     <div className="flight-card connecting-card">
       <div className="flight-card-main">
         <div className="flight-info-col">
-          <span className="flight-number">{cf.leg1.flight_number}</span>
+          <SkyFlowLogo size="sm" flightNumbers={`${cf.leg1.flight_number}, ${cf.leg2.flight_number}`} />
           <span className="stop-badge onestop">1 Stop</span>
-
         </div>
         <div className="flight-route-col">
           <div className="flight-time-group">
@@ -365,47 +365,16 @@ function BookFlightModal({ flight, displayPrice, onClose }: { flight: Flight; di
     }
   }, [user]);
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError('');
-    setLoading(true);
-    try {
-      const res = await bookingsApi.create({
-        flight_id: flight.id,
-        seats,
-        passenger_name: name,
-        passenger_email: email,
-        passenger_phone: phone,
-      });
-      // Stripe live mode — redirect to Stripe Checkout
-      if (res.checkout_url) {
-        window.location.href = res.checkout_url;
-        return;
-      }
-      // Demo mode — use built-in checkout page
-      // Only show demo checkout if payment_intent_id starts with "pi_mock"
-      if (res.payment_intent_id && res.payment_intent_id.startsWith('pi_mock')) {
-        const params = new URLSearchParams();
-        params.set('booking_id', res.booking_id);
-        params.set('payment_intent_id', res.payment_intent_id);
-        params.set('amount', res.amount.toString());
-        params.set('flight_id', flight.id);
-        if (name) params.set('name', name);
-        if (email) params.set('email', email);
-        navigate(`/checkout?${params.toString()}`);
-        return;
-      }
-      // If we have a real PI but no checkout_url, something went wrong
-      if (res.payment_intent_id) {
-        setError('Payment setup failed — please try again');
-        setLoading(false);
-        return;
-      }
-      navigate(`/bookings/${res.booking_id}`);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Booking failed');
-      setLoading(false);
-    }
+    if (!name || !email || !phone || phone.replace(/\D/g, '').length < 7) return;
+    const params = new URLSearchParams();
+    params.set('flight_id', flight.id);
+    params.set('seats', seats.toString());
+    params.set('name', name);
+    params.set('email', email);
+    params.set('phone', phone);
+    navigate(`/review?${params.toString()}`);
   }
 
   return (
@@ -426,8 +395,11 @@ function BookFlightModal({ flight, displayPrice, onClose }: { flight: Flight; di
             <input type="email" value={email} onChange={e => setEmail(e.target.value)} required />
           </div>
           <div className="form-group">
-            <label>Phone</label>
-            <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} />
+            <label>Phone <span style={{ color: 'var(--danger)', fontWeight: 400 }}>*</span></label>
+            <input type="tel" value={phone} onChange={e => setPhone(e.target.value.replace(/[^\d+\-() ]/g, '').slice(0, 20))} placeholder="+1 (555) 000-0000" required />
+            {phone.length > 0 && phone.replace(/\D/g, '').length < 7 && (
+              <div className="field-error">Enter a valid phone number</div>
+            )}
           </div>
           <div className="form-group">
             <label>Seats</label>
@@ -436,7 +408,7 @@ function BookFlightModal({ flight, displayPrice, onClose }: { flight: Flight; di
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
             <button type="button" className="btn btn-secondary" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
             <button type="submit" className="btn btn-primary" disabled={loading} style={{ flex: 1 }}>
-              {loading ? <span className="spinner" /> : 'Continue to Payment'}
+              {loading ? <span className="spinner" /> : 'Review Booking →'}
             </button>
           </div>
         </form>

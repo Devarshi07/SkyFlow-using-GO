@@ -1,0 +1,307 @@
+.review-page {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 1rem 0 3rem;
+}
+
+.review-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 4rem;
+  color: var(--text-muted);
+}
+
+.review-header {
+  margin-bottom: 1.5rem;
+}
+
+.review-header h1 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 0.2rem;
+}
+
+.review-sub {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+/* Layout */
+.review-layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+/* Cards */
+.review-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.review-card-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* Route header */
+.review-route-header {
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.review-route-header h2 {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 0.3rem;
+}
+
+.review-route-date {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #0770e3;
+}
+
+.review-route-meta {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* Airline row */
+.review-airline-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.review-class-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: #f1f5f9;
+  padding: 0.3rem 0.8rem;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+/* Timeline */
+.review-timeline {
+  padding-left: 0.5rem;
+}
+
+.timeline-stop {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.timeline-time {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+  min-width: 80px;
+  text-align: right;
+}
+
+.timeline-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 3px solid #0770e3;
+  background: #fff;
+  flex-shrink: 0;
+  margin-top: 4px;
+  position: relative;
+  z-index: 1;
+}
+
+.timeline-info {
+  flex: 1;
+}
+
+.timeline-city {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.timeline-airport {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 0.1rem;
+}
+
+.timeline-duration {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0 0.5rem 80px;
+  margin-left: calc(80px / 2);
+  position: relative;
+}
+
+.timeline-duration::before {
+  content: '';
+  position: absolute;
+  left: calc(80px + 5px);
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: repeating-linear-gradient(
+    to bottom,
+    #cbd5e1 0px,
+    #cbd5e1 4px,
+    transparent 4px,
+    transparent 8px
+  );
+}
+
+.timeline-line {
+  display: none;
+}
+
+.timeline-duration-text {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  background: #fff;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+  position: relative;
+  z-index: 1;
+  margin-left: calc(80px / 2 + 0.5rem);
+}
+
+/* Traveller */
+.review-traveller {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.traveller-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  font-size: 0.88rem;
+  border-bottom: 1px solid #f8fafc;
+}
+
+.traveller-row:last-child {
+  border-bottom: none;
+}
+
+.traveller-label {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.traveller-value {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+/* Fare card */
+.fare-card {
+  position: sticky;
+  top: 76px;
+}
+
+.fare-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.45rem 0;
+  font-size: 0.88rem;
+  color: #334155;
+}
+
+.fare-total {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0f172a;
+  padding: 0.65rem 0;
+}
+
+.fare-total span:last-child {
+  color: #0770e3;
+  font-size: 1.15rem;
+}
+
+.fare-divider {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 0.35rem 0;
+}
+
+.review-pay-btn {
+  width: 100%;
+  padding: 0.85rem;
+  font-size: 0.95rem;
+  margin-top: 1.25rem;
+  border-radius: 10px;
+}
+
+.review-secure {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.75rem;
+}
+
+.review-back-btn {
+  width: 100%;
+  margin-top: 0.75rem;
+  text-align: center;
+}
+
+/* Sidebar */
+.review-sidebar {
+  position: relative;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .review-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .fare-card {
+    position: static;
+  }
+
+  .timeline-time {
+    min-width: 65px;
+    font-size: 0.95rem;
+  }
+
+  .timeline-duration {
+    padding-left: 65px;
+    margin-left: calc(65px / 2);
+  }
+
+  .timeline-duration::before {
+    left: calc(65px + 5px);
+  }
+
+  .timeline-duration-text {
+    margin-left: calc(65px / 2 + 0.5rem);
+  }
+}

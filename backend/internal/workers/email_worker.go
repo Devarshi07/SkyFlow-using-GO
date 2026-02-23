@@ -68,8 +68,24 @@ func (w *EmailWorker) Start() error {
 		return fmt.Errorf("consume reset queue: %w", err)
 	}
 
+	// Welcome emails
+	if err := w.mq.DeclareQueue(events.QueueWelcome); err != nil {
+		return fmt.Errorf("declare queue: %w", err)
+	}
+	if err := w.mq.Consume(events.QueueWelcome, "email-worker-welcome", func(body []byte) error {
+		var evt events.WelcomeEvent
+		if err := json.Unmarshal(body, &evt); err != nil {
+			w.log.Error("failed to unmarshal welcome event", "error", err)
+			return nil
+		}
+		w.log.Info("processing welcome email", "email", evt.Email)
+		return w.sender.SendWelcome(evt.Email)
+	}); err != nil {
+		return fmt.Errorf("consume welcome queue: %w", err)
+	}
+
 	w.log.Info("email worker started",
-		"queues", []string{events.QueueBookingConfirmed, events.QueuePasswordReset},
+		"queues", []string{events.QueueBookingConfirmed, events.QueuePasswordReset, events.QueueWelcome},
 	)
 	return nil
 }

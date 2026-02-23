@@ -31,9 +31,14 @@ type PasswordResetPublisher interface {
 	PublishPasswordReset(ctx context.Context, email, resetLink string)
 }
 
+type WelcomePublisher interface {
+	PublishWelcome(ctx context.Context, email string)
+}
+
 type Service struct {
-	store          Store
-	resetPublisher PasswordResetPublisher
+	store            Store
+	resetPublisher   PasswordResetPublisher
+	welcomePublisher WelcomePublisher
 }
 
 func NewService(store Store) *Service {
@@ -42,6 +47,10 @@ func NewService(store Store) *Service {
 
 func (s *Service) SetResetPublisher(p PasswordResetPublisher) {
 	s.resetPublisher = p
+}
+
+func (s *Service) SetWelcomePublisher(p WelcomePublisher) {
+	s.welcomePublisher = p
 }
 
 func (s *Service) Login(ctx context.Context, req LoginRequest) (*TokenResponse, *apperrors.AppError) {
@@ -65,8 +74,8 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest) (*TokenResp
 	if req.Email == "" || req.Password == "" {
 		return nil, apperrors.BadRequest("email and password required")
 	}
-	if len(req.Password) < 6 {
-		return nil, apperrors.Validation(map[string]string{"password": "must be at least 6 characters"})
+	if len(req.Password) < 8 {
+		return nil, apperrors.Validation(map[string]string{"password": "must be at least 8 characters with uppercase, lowercase, and a number"})
 	}
 	hash, err := HashPassword(req.Password)
 	if err != nil {
@@ -79,6 +88,12 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest) (*TokenResp
 		}
 		return nil, apperrors.Internal(err)
 	}
+
+	// Send welcome email
+	if s.welcomePublisher != nil {
+		s.welcomePublisher.PublishWelcome(ctx, req.Email)
+	}
+
 	return s.issueTokens(ctx, u)
 }
 

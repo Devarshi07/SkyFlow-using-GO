@@ -8,6 +8,7 @@ import { ForgotPassword } from './pages/ForgotPassword';
 import { ResetPassword } from './pages/ResetPassword';
 import { Flights } from './pages/Flights';
 import { Profile } from './pages/Profile';
+import { ReviewBooking } from './pages/ReviewBooking';
 import { Checkout } from './pages/Checkout';
 import { BookingConfirmation } from './pages/BookingConfirmation';
 import { BookingDetail } from './pages/BookingDetail';
@@ -27,6 +28,7 @@ export default function App() {
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/flights" element={<Flights />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/review" element={<ReviewBooking />} />
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/booking-confirmed" element={<BookingConfirmation />} />
             <Route path="/bookings/:id" element={<BookingDetail />} />

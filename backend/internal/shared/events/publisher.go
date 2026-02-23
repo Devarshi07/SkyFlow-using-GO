@@ -29,6 +29,18 @@ func (p *Publisher) PublishPasswordReset(ctx context.Context, email, resetLink s
 	}
 }
 
+func (p *Publisher) PublishWelcome(ctx context.Context, email string) {
+	if p == nil || p.mq == nil {
+		return
+	}
+	evt := WelcomeEvent{Email: email}
+	if err := p.mq.Publish(ctx, QueueWelcome, evt); err != nil {
+		p.log.Error("failed to publish welcome event", "email", email, "error", err)
+	} else {
+		p.log.Info("published welcome event", "email", email)
+	}
+}
+
 func (p *Publisher) PublishBookingConfirmed(ctx context.Context, evt BookingConfirmedEvent) {
 	if p == nil || p.mq == nil {
 		return

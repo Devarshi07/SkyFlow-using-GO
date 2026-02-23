@@ -4,7 +4,7 @@
 
 /* ── Hero ────────────────────────────────────────────── */
 .hero-section {
-  background: linear-gradient(160deg, #0b1a3a 0%, #112240 35%, #0a192f 100%);
+  background: linear-gradient(160deg, #0770e3 0%, #0560c2 50%, #044ea0 100%);
   padding: 3rem 1.5rem 4.5rem;
   position: relative;
   overflow: hidden;
@@ -17,7 +17,7 @@
   right: -80px;
   width: 400px;
   height: 400px;
-  background: radial-gradient(circle, rgba(79, 140, 255, 0.08) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
   pointer-events: none;
 }
 
@@ -36,7 +36,7 @@
 }
 
 .hero-sub {
-  color: #8892b0;
+  color: rgba(255, 255, 255, 0.8);
   font-size: 1rem;
   margin-bottom: 2rem;
   text-align: center;
@@ -527,7 +527,7 @@
 .trending-label {
   font-size: 0.8rem;
   font-weight: 600;
-  color: #8892b0;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .trending-pill {
@@ -535,16 +535,16 @@
   border-radius: 20px;
   font-size: 0.8rem;
   font-weight: 600;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #ccd6f6;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #fff;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .trending-pill:hover {
-  background: rgba(79, 140, 255, 0.15);
-  border-color: rgba(79, 140, 255, 0.4);
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.4);
   color: #fff;
 }
 
@@ -575,9 +575,9 @@
 }
 
 .promo-card:hover {
-  border-color: rgba(79, 140, 255, 0.4);
+  border-color: rgba(7, 112, 227, 0.3);
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
 }
 
 .promo-card-accent {
@@ -593,7 +593,7 @@
 .promo-card h3 {
   font-size: 1.05rem;
   font-weight: 700;
-  color: #fff;
+  color: #0f172a;
   margin-bottom: 0.35rem;
 }
 
@@ -648,7 +648,7 @@
 .popular-route-card:hover {
   border-color: var(--accent);
   transform: translateY(-3px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
 }
 
 .route-names {

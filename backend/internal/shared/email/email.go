@@ -98,6 +98,37 @@ We wish you a pleasant journey.
 	return s.send(e.To, subject, body)
 }
 
+func (s *Sender) SendWelcome(to string) error {
+	subject := "Welcome to SkyFlow! ✈"
+
+	body := fmt.Sprintf(`Welcome aboard!
+
+Thank you for creating your SkyFlow account.
+
+══════════════════════════════════════════
+  YOUR JOURNEY STARTS HERE
+══════════════════════════════════════════
+
+With SkyFlow, you can:
+
+  ✈  Search thousands of flights
+  💳  Book securely with instant confirmation
+  📧  Get email confirmations & e-tickets
+  ✏️  Edit bookings anytime
+
+Start exploring flights now and find your
+next adventure!
+
+══════════════════════════════════════════
+
+Happy travels!
+
+— The SkyFlow Team
+`)
+
+	return s.send(to, subject, body)
+}
+
 func (s *Sender) SendPasswordReset(to, resetLink string) error {
 	subject := "SkyFlow — Reset Your Password"
 

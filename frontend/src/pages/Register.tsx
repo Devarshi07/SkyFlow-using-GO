@@ -4,17 +4,38 @@ import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../api/client';
 import './Auth.css';
 
+function validatePassword(pw: string) {
+  return {
+    minLength: pw.length >= 8,
+    hasUpper: /[A-Z]/.test(pw),
+    hasLower: /[a-z]/.test(pw),
+    hasNumber: /\d/.test(pw),
+  };
+}
+
 export function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const pwReqs = validatePassword(password);
+  const pwValid = pwReqs.minLength && pwReqs.hasUpper && pwReqs.hasLower && pwReqs.hasNumber;
+
+  function formatPhone(v: string) {
+    return v.replace(/[^\d+\-() ]/g, '').slice(0, 20);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!pwValid) {
+      setError('Password does not meet requirements');
+      return;
+    }
     if (password !== confirm) {
       setError('Passwords do not match');
       return;
@@ -55,14 +76,29 @@ export function Register() {
             <input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required />
           </div>
           <div className="form-group">
+            <label htmlFor="phone">Phone Number</label>
+            <input id="phone" type="tel" value={phone} onChange={e => setPhone(formatPhone(e.target.value))} placeholder="+1 (555) 000-0000" />
+          </div>
+          <div className="form-group">
             <label htmlFor="password">Password</label>
-            <input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Min 6 characters" required minLength={6} />
+            <input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Create a strong password" required />
+            {password.length > 0 && (
+              <div className="password-requirements">
+                <div className={pwReqs.minLength ? 'req-met' : 'req-unmet'}>{pwReqs.minLength ? '✓' : '○'} At least 8 characters</div>
+                <div className={pwReqs.hasUpper ? 'req-met' : 'req-unmet'}>{pwReqs.hasUpper ? '✓' : '○'} One uppercase letter</div>
+                <div className={pwReqs.hasLower ? 'req-met' : 'req-unmet'}>{pwReqs.hasLower ? '✓' : '○'} One lowercase letter</div>
+                <div className={pwReqs.hasNumber ? 'req-met' : 'req-unmet'}>{pwReqs.hasNumber ? '✓' : '○'} One number</div>
+              </div>
+            )}
           </div>
           <div className="form-group">
             <label htmlFor="confirm">Confirm Password</label>
-            <input id="confirm" type="password" value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="••••••" required />
+            <input id="confirm" type="password" value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="••••••••" required />
+            {confirm.length > 0 && confirm !== password && (
+              <div className="field-error">Passwords do not match</div>
+            )}
           </div>
-          <button type="submit" className="btn btn-primary auth-submit" disabled={loading}>
+          <button type="submit" className="btn btn-primary auth-submit" disabled={loading || !pwValid}>
             {loading ? <span className="spinner" /> : 'Create Account'}
           </button>
         </form>
