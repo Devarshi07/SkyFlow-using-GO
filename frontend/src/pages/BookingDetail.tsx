@@ -169,7 +169,6 @@ export function BookingDetail() {
 
   const isPostPayment = postPaymentPhase !== 'none';
   const isConfirmed = postPaymentPhase === 'confirmed' || booking.status === 'confirmed';
-  const isPending = postPaymentPhase === 'pending';
   const amount = (booking.amount / 100).toFixed(2);
   const pricePerSeat = flight ? (flight.price / 100).toFixed(2) : '—';
 

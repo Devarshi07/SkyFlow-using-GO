@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { gqlApi } from '../api/graphql';
-import { bookingsApi, flightsApi, profileApi, type Flight, type ConnectingFlight, type Airport, type City, ApiError } from '../api/client';
+import { flightsApi, profileApi, type Flight, type ConnectingFlight, type Airport, type City } from '../api/client';
 import { SkyFlowLogo } from '../components/SkyFlowLogo';
 import { useAuth } from '../context/AuthContext';
 import './Flights.css';
@@ -363,7 +363,6 @@ export function Flights() {
           flight={bookingFlight}
           displayPrice={bookingPriceOverride ?? bookingFlight.price}
           outboundFlight={isRoundTrip ? selectedOutbound : null}
-          outboundPrice={selectedOutboundPrice}
           isRoundTrip={isRoundTrip}
           onClose={() => { setBookingFlight(null); setBookingPriceOverride(null); }}
         />
@@ -449,11 +448,10 @@ function ConnectingFlightCard({ cf, airports, cities, onBook, btnLabel = 'Book' 
   );
 }
 
-function BookFlightModal({ flight, displayPrice, outboundFlight, outboundPrice, isRoundTrip, onClose }: {
+function BookFlightModal({ flight, displayPrice, outboundFlight, isRoundTrip, onClose }: {
   flight: Flight;
   displayPrice: number;
   outboundFlight?: Flight | null;
-  outboundPrice?: number | null;
   isRoundTrip?: boolean;
   onClose: () => void;
 }) {
@@ -463,8 +461,8 @@ function BookFlightModal({ flight, displayPrice, outboundFlight, outboundPrice, 
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [seats, setSeats] = useState(1);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [error] = useState('');
+  const [loading] = useState(false);
 
   useEffect(() => {
     if (user) {

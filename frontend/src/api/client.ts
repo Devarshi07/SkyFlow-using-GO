@@ -150,6 +150,7 @@ export interface Booking {
   user_id: string;
   flight_id: string;
   seats: number;
+  amount: number;
   passenger_name: string;
   passenger_email: string;
   passenger_phone?: string;
