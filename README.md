@@ -43,3 +43,27 @@ Microservices (Auth, Flights, Bookings, Payments)
 PostgreSQL (Neon) + Redis (Upstash) 
     ↓
 Workers (Asynchronous Email via RabbitMQ)
+
+## 🐳 Running Locally (Recruiter & Reviewer Friendly)
+
+The easiest way to run this project locally without installing Go, Node.js, or configuring any databases is by using **Docker**. This allows you to spin up the entire full-stack environment with a single command.
+
+### Prerequisites
+* [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running on your machine.
+
+### 1. Clone the Repository
+```bash
+git clone [https://github.com/SomyaPadhy4501/SkyFlow-using-GO](https://github.com/SomyaPadhy4501/SkyFlow-using-GO)
+cd SkyFlow
+
+# Local Docker Environment Variables
+DATABASE_URL="postgresql://skyflow:password@postgres:5432/skyflow?sslmode=disable"
+REDIS_URL="redis://redis:6379"
+RABBITMQ_URL="amqp://guest:guest@rabbitmq:5672/"
+
+# OAuth & Payments (Optional for basic local viewing)
+GOOGLE_CLIENT_ID="your-client-id.apps.googleusercontent.com"
+GOOGLE_CLIENT_SECRET="your-client-secret"
+STRIPE_SECRET_KEY="sk_test_..."
+
+docker-compose up --build
