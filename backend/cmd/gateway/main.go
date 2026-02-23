@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -199,10 +200,13 @@ func corsMiddleware(next http.Handler) http.Handler {
 		origin := r.Header.Get("Origin")
 		frontendURL := os.Getenv("FRONTEND_URL")
 
-		// Allow the configured frontend URL, localhost for dev, or any origin if not set
+		// Allow the configured frontend URL, localhost for dev, Vercel deployment URLs, or any origin if not set
 		allowed := "*"
 		if frontendURL != "" {
 			if origin == frontendURL || origin == "http://localhost:5173" || origin == "http://localhost:5176" {
+				allowed = origin
+			} else if strings.Contains(origin, "vercel.app") && strings.Contains(frontendURL, "vercel.app") {
+				// Allow any Vercel deployment URL (e.g. *-somyapadhy4501s-projects.vercel.app) when frontend is on Vercel
 				allowed = origin
 			} else {
 				allowed = frontendURL

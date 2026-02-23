@@ -71,6 +71,10 @@ resource "azurerm_container_app" "skyflow_api" {
         value = "8080"
       }
       env {
+        name  = "DEPLOYED_AT"
+        value = timestamp()
+      }
+      env {
         name        = "DATABASE_URL"
         secret_name = "database-url"
       }
