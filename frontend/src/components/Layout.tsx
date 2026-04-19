@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { ChatWidget } from './ChatWidget';
 import './Layout.css';
 
 export function Layout() {
@@ -129,6 +130,8 @@ export function Layout() {
           <Outlet />
         </div>
       </main>
+
+      <ChatWidget />
     </>
   );
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/joho/godotenv"
 	"github.com/skyflow/skyflow/internal/airports"
+	"github.com/skyflow/skyflow/internal/assistant"
 	"github.com/skyflow/skyflow/internal/auth"
 	"github.com/skyflow/skyflow/internal/bookings"
 	"github.com/skyflow/skyflow/internal/cities"
@@ -147,13 +148,18 @@ func main() {
 
 	// Bookings (requires postgres)
 	var bookingHandler *bookings.Handler
+	var bookingSvc *bookings.Service
 	if bookingStore != nil {
-		bookingSvc := bookings.NewService(bookingStore, flightSvc, paymentSvc)
+		bookingSvc = bookings.NewService(bookingStore, flightSvc, paymentSvc)
 		if eventPublisher != nil {
 			bookingSvc.SetPublisher(eventPublisher)
 		}
 		bookingHandler = bookings.NewHandler(bookingSvc, log)
 	}
+
+	// AI Assistant
+	assistantSvc := assistant.NewService(flightSvc, bookingSvc, airportSvc, citySvc, eventPublisher, rdb, log)
+	assistantHandler := assistant.NewHandler(assistantSvc, log)
 
 	r := chi.NewRouter()
 	r.Use(middleware.RealIP)
@@ -178,6 +184,7 @@ func main() {
 		if bookingHandler != nil {
 			r.Route("/bookings", bookingHandler.Routes)
 		}
+		r.Route("/assistant", assistantHandler.Routes)
 	})
 
 	// GraphQL endpoint
